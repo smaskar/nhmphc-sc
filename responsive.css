@@ -21,10 +21,28 @@ label select, .wrap select {
 select:focus-visible { outline: 3px solid #b87924; outline-offset: 2px; }
 .controls label { min-width: 0; }
 #exportStatus:empty { display: none; }
+
+.archive-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: #195146;
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+}
+.archive-download span { font-size: 13px; font-weight: 400; }
+.archive-download:hover { background: #103f38; }
+
 @media (forced-colors: active) {
   label select, .wrap select { appearance: auto; background-image: none; }
 }
 @media (max-width: 600px) {
+  .archive-download { width: 100%; flex-wrap: wrap; column-gap: 8px; row-gap: 2px; }
   main { padding: 12px 14px 40px; }
   header { padding-block: 18px; }
   nav { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }

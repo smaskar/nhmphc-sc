@@ -127,5 +127,10 @@ if private_dir:
         shutil.copy2(site/filename,private_dir/filename)
     shutil.copytree(site/'vendor',private_dir/'vendor',dirs_exist_ok=True)
     page=private_dir/'index.html'
+    archive_name='Maharashtra-District-Reports-2026-11-05.zip'
+    private_zip=private_dir.parent/'Maharashtra-All-District-Gap-Reports-2026-11-05.zip'
+    archive_source=private_zip if private_zip.is_file() else site/'reports'/archive_name
+    (private_dir/'reports').mkdir(exist_ok=True)
+    shutil.copy2(archive_source,private_dir/'reports'/archive_name)
     page.write_text(page.read_text().replace('Officer overview · Backup','Local officer copy with original remarks · Backup'))
 ((private_dir or site)/'officer-data.js').write_text('const officerData = '+json.dumps(payload,separators=(',',':'),ensure_ascii=False)+';\n')
