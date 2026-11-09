@@ -128,7 +128,7 @@ function gapsView() {
     $('rankTitle').textContent=$('district').value+' assessment abstract';
     const gaps=[...ranked].sort((a,b)=>b.count-a.count || a.name.localeCompare(b.name));
     const biggest=gaps.filter(m=>m.count).slice(0,8);
-    $('definition').textContent=biggest.length?'Biggest reported gaps by number of affected facilities. Select an indicator to see the facility names and remarks.':scope.length?'No gaps were reported for this selection.':'No eligible assessments in this selection.';
+    $('definition').textContent=biggest.length?'Biggest reported gaps by number of affected facilities. Bar length shows affected facilities. Select an indicator to see facility names and remarks.':scope.length?'No gaps were reported for this selection.':'No eligible assessments in this selection.';
     function facilityLink(m,label) {
       const link=new URL(location.href);
       link.search='';
@@ -140,7 +140,7 @@ function gapsView() {
     }
     const urgent=gaps.filter(urgency);
     const alerts=urgent.length?'<aside class="urgent-box"><strong>Urgent stock follow-up</strong><ul>'+urgent.map(m=>'<li>'+facilityLink(m,urgency(m)+' stock-out · '+fmt(m.count)+' PHCs')+'</li>').join('')+'</ul></aside>':'';
-    $('ranking').innerHTML=alerts+'<ol class="abstract-gaps">'+biggest.map(m=>'<li>'+facilityLink(m,m.name)+'<div><span class="rate-band" style="background:'+prevalence(m).color+'">'+bandText(m)+'</span> '+fmt(m.count)+' of '+fmt(m.total)+' eligible · '+fmt(m.missing)+' missing</div></li>').join('')+'</ol>';
+    $('ranking').innerHTML=alerts+'<ol class="abstract-gaps">'+biggest.map(m=>'<li>'+facilityLink(m,m.name)+'<div class="abstract-bar" aria-hidden="true"><i style="width:'+100*m.count/biggest[0].count+'%"></i></div><div><span class="rate-band" style="background:'+prevalence(m).color+'">'+bandText(m)+'</span> '+fmt(m.count)+' of '+fmt(m.total)+' eligible · '+fmt(m.missing)+' missing</div></li>').join('')+'</ol>';
     return;
   }
   $('rankTitle').textContent='Gap priorities';

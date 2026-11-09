@@ -87,3 +87,8 @@ select:focus-visible { outline: 3px solid #b87924; outline-offset: 2px; }
 
 #downloadAbstract { min-height: 48px; }
 @media(max-width:600px) { #downloadAbstract { width:100%; } }
+
+#abstractDownload:not([hidden]) { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+
+.abstract-bar { height:8px; background:#e4ece8; border-radius:4px; overflow:hidden; }
+.abstract-bar i { display:block; height:100%; background:#286957; }

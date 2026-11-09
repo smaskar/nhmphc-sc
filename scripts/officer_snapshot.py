@@ -132,5 +132,6 @@ if private_dir:
     archive_source=private_zip if private_zip.is_file() else site/'reports'/archive_name
     (private_dir/'reports').mkdir(exist_ok=True)
     shutil.copy2(archive_source,private_dir/'reports'/archive_name)
+    shutil.copy2(site/'reports'/'Maharashtra-All-Abstracts-2026-11-05.zip',private_dir/'reports')
     page.write_text(page.read_text().replace('Officer overview · Backup','Local officer copy with original remarks · Backup'))
 ((private_dir or site)/'officer-data.js').write_text('const officerData = '+json.dumps(payload,separators=(',',':'),ensure_ascii=False)+';\n')

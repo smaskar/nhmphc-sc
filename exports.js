@@ -169,9 +169,11 @@ async function downloadAbstract() {
     if(priority.length){
       const rows=priority.map(m=>{
         const phcs=scope.filter(row=>row[3]==='PHC' && row[4][m.i]==='1').length;
-        return [m.name,phcs,m.count-phcs,m.count,m.total,{text:bandText(m),fillColor:prevalence(m).color},m.missing];
+        const width=64*m.count/priority[0].count;
+        const affected={stack:[{text:fmt(m.count)},{canvas:[{type:'rect',x:0,y:0,w:64,h:4,color:'#E4ECE8'},{type:'rect',x:0,y:0,w:width,h:4,color:'#286957'}]}]};
+        return [m.name,phcs,m.count-phcs,affected,m.total,{text:bandText(m),fillColor:prevalence(m).color},m.missing];
       });
-      content.push({text:'Biggest reported gaps',bold:true,fontSize:15,margin:[0,12,0,5]},pdfTable(summaryCols,rows,['*',25,25,35,32,80,34]),{text:bandLegend,fontSize:9,margin:[0,8,0,0]});
+      content.push({text:'Biggest reported gaps',bold:true,fontSize:15,margin:[0,12,0,5]},pdfTable(summaryCols,rows,['*',25,25,65,32,80,34]),{text:bandLegend,fontSize:9,margin:[0,8,0,0]});
     }
     const report={district,scopeLabel:[district,category,kind].join(' · ')};
     const blob=await renderReportPdf(report,content,'Assessment abstract');
