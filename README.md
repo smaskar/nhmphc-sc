@@ -1,7 +1,7 @@
-# Maharashtra PHC and Subcentre Gap Finder
+# Maharashtra facility assessment review
 
-A mobile-friendly district dashboard for the FY 2026–27 assessment backup of 5 November 2026. Open index.html alongside snapshot.js or serve this directory with a static web server.
+The officer overview at index.html provides district, category and facility drill-down for five comparable assessment measures, plus reconciliation of 1,992 pending parent PHC links. explorer.html retains the full gap explorer and the facility directory as recorded before the latest mapping reconciliation. Links to older district, problem and directory views continue to work.
 
-The PHC view includes 54 ranked gap indicators. The subcentre view includes district gaps and a parent PHC selector with nine linked-subcentre measures. Monthly teleconsultations are displayed separately as service volume. District totals include assessed subcentres whose parent PHC still needs review.
+The public snapshot is based on the 5 November 2026 backup for FY 2026–27. The mapping register distinguishes unique backup-supported matches from suggested spellings and cases requiring district confirmation. Publishing the register does not change source facility records.
 
-GitHub Pages serves the root of the main branch. The public snapshot contains aggregate counts and PHC directory labels.
+To rebuild officer-data.js, run python3 scripts/officer_snapshot.py SOURCE_DIR with the private remapped.json, review-counts.json, assessment-data.sql.gz and sc-data.sql.gz extracts in SOURCE_DIR. Only publish the generated dashboard assets. GitHub Pages serves the root of main.
