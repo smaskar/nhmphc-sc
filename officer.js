@@ -46,6 +46,31 @@ function table(headers, rows) {
 const cell = value => '<td>'+esc(value)+'</td>';
 const num = value => '<td class="num">'+fmt(value)+'</td>';
 const percent = (value,total) => total?(100*value/total).toFixed(1)+'%':'—';
+const bandLegend='Widespread ≥50% · High 25–<50% · Moderate 10–<25% · Low <10%';
+const urgentStocks=new Map([
+  ['Anti Snake Venom out of stock','ASV'],
+  ['Anti Rabies Vaccine out of stock','ARV'],
+  ['Anti Rabies Serum out of stock','ARS']
+]);
+function urgency(m) {
+  return m.count>0 ? urgentStocks.get(m.name) : undefined;
+}
+function prevalence(m) {
+  if(!m.total) return {label:'No assessment',color:'#E2E5E4'};
+  if(m.missing===m.total) return {label:'No usable responses',color:'#E2E5E4'};
+  const rate=m.count/m.total;
+  if(rate>=0.5) return {label:'Widespread',color:'#F7C4C4'};
+  if(rate>=0.25) return {label:'High',color:'#FFD6AD'};
+  if(rate>=0.1) return {label:'Moderate',color:'#F8E392'};
+  return {label:'Low',color:'#CBE8D3'};
+}
+function bandText(m) {
+  const band=prevalence(m);
+  return m.total && m.total!==m.missing ? band.label+' · '+percent(m.count,m.total) : band.label;
+}
+function bandCell(m) {
+  return '<td><span class="rate-band" style="background:'+prevalence(m).color+'">'+bandText(m)+'</span></td>';
+}
 const selectedDistrict = row => $('district').value===allDistricts || row[0]===$('district').value;
 function mappingView() {
   const scope=reviews.filter(selectedDistrict);
@@ -96,24 +121,36 @@ function gapsView() {
   if(!ranked.some(m=>m.i===selected)) selected=ranked[0].i;
   const groups=categories.map(category=>{
     const members=available.filter(m=>m.category===category);
-    return {name:category,count:scope.filter(r=>members.some(m=>r[4][m.i]==='1')).length,total:scope.filter(r=>members.some(m=>r[4][m.i]!=='-')).length};
+    const missing=scope.filter(r=>members.some(m=>r[4][m.i]==='?')).length;
+    const allUnknown=scope.filter(r=>members.some(m=>r[4][m.i]==='?') && members.every(m=>['?','-'].includes(r[4][m.i]))).length;
+    return {name:category,missing:allUnknown,anyMissing:missing,count:scope.filter(r=>members.some(m=>r[4][m.i]==='1')).length,total:scope.filter(r=>members.some(m=>r[4][m.i]!=='-')).length};
   }).sort(rank);
-  let html=!$('category').selectedIndex?'<h3>Facilities affected by category</h3>'+table(['Category','Affected facilities','Eligible','% affected'],groups.map(m=>'<tr><td><button class="pick" data-category="'+esc(m.name)+'">'+esc(m.name)+'</button></td>'+num(m.count)+num(m.total)+cell(percent(m.count,m.total))+'</tr>')):'';
+  let html=!$('category').selectedIndex?'<h3>Facilities affected by category</h3>'+table(['Category','Affected facilities','Eligible','Prevalence','Facilities missing a response'],groups.map(m=>'<tr><td><button class="pick" data-category="'+esc(m.name)+'">'+esc(m.name)+'</button></td>'+num(m.count)+num(m.total)+bandCell(m)+num(m.anyMissing)+'</tr>')):'';
   const m=ranked.find(m=>m.i===selected);
   const byDistrict=new Map();
   for(const r of scope) {
     if(r[4][selected]==='-') continue;
-    if(!byDistrict.has(r[0])) byDistrict.set(r[0],{name:r[0],count:0,total:0});
-    const d=byDistrict.get(r[0]);d.total++;if(r[4][selected]==='1') d.count++;
+    if(!byDistrict.has(r[0])) byDistrict.set(r[0],{name:r[0],count:0,total:0,missing:0});
+    const d=byDistrict.get(r[0]);d.total++;if(r[4][selected]==='?') d.missing++;if(r[4][selected]==='1') d.count++;
   }
   const districtRows=[...byDistrict.values()].sort(rank);
+  const urgent=ranked.filter(urgency);
+  const alerts=urgent.map(g=>'<button class="urgent-pick" data-measure="'+g.i+'">'+urgency(g)+' stock-out · '+fmt(g.count)+' PHCs</button>').join(' ');
+  html='<p class="muted">'+bandLegend+'</p>'+(alerts?'<aside class="urgent-box"><strong>Urgent stock follow-up</strong><div>'+alerts+'</div></aside>':'')+html;
   html+='<h3>Indicators</h3>'+table(['Indicator','Applies to','Affected','Eligible','% affected','Missing'],ranked.map(m=>
-    '<tr class="'+(m.i===selected?'selected':'')+'"><td><button class="pick" data-measure="'+m.i+'">'+esc(m.name)+'</button></td>'+cell(m.sc?'PHC, SC':'PHC')+num(m.count)+num(m.total)+cell(percent(m.count,m.total))+num(m.missing)+'</tr>'));
-  if (!$('district').selectedIndex) html+='<details open id="districtRanks"><summary>District comparison · '+esc(m.name)+'</summary>'+table(['District','Affected','Eligible','% affected'],districtRows.map(d=>'<tr><td><button class="pick" data-district="'+esc(d.name)+'">'+esc(d.name)+'</button></td>'+num(d.count)+num(d.total)+cell(percent(d.count,d.total))+'</tr>'))+'</details>';
+    '<tr class="'+(m.i===selected?'selected':'')+'"><td><button class="pick" data-measure="'+m.i+'">'+esc(m.name)+'</button>'+(urgency(m)?'<strong class="urgent-tag">Urgent</strong>':'')+'</td>'+cell(m.sc?'PHC, SC':'PHC')+num(m.count)+num(m.total)+bandCell(m)+num(m.missing)+'</tr>'));
+  if (!$('district').selectedIndex) html+='<details open id="districtRanks"><summary>District comparison · '+esc(m.name)+'</summary>'+table(['District','Affected','Eligible','Prevalence','Missing'],districtRows.map(d=>'<tr><td><button class="pick" data-district="'+esc(d.name)+'">'+esc(d.name)+'</button></td>'+num(d.count)+num(d.total)+bandCell(d)+num(d.missing)+'</tr>'))+'</details>';
   $('ranking').innerHTML=html;
+  for(const grid of $('ranking').querySelectorAll('table')) {
+    grid.classList.add('gap-grid');
+    const headers=Array.from(grid.tHead.rows[0].cells,header=>header.textContent);
+    for(const row of grid.tBodies[0].rows) {
+      Array.from(row.cells).forEach((cell,i)=>{cell.dataset.label=headers[i];});
+    }
+  }
   detailRows=scope.filter(r=>r[4][selected]===$('response').value);
   $('detailTitle').textContent=m.name;
-  $('detailNote').textContent=$('district').value+' · '+fmt(m.count)+' affected of '+fmt(m.total)+' eligible assessed facilities · '+fmt(m.missing)+' missing or unclear.';
+  $('detailNote').textContent=(urgency(m)?'Urgent stock follow-up · ':'')+bandText(m)+' · '+$('district').value+' · '+fmt(m.count)+' affected of '+fmt(m.total)+' eligible assessed facilities · '+fmt(m.missing)+' missing or unclear.';
 }
 function evidenceCells(row, index=selected) {
   const [value,remark]=row[5][index] || [0,0];
@@ -140,6 +177,7 @@ function render() {
 }
 $('ranking').onclick=e=>{
   const b=e.target.closest('button'); if (!b) return;
+  if (b.classList.contains('urgent-pick')) $('response').value='1';
   if (b.dataset.district) $('district').value=b.dataset.district;
   else if (b.dataset.category) { $('category').value=b.dataset.category; selected=-1; }
   else selected=Number(b.dataset.measure);

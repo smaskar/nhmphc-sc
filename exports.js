@@ -25,6 +25,10 @@ function collectReport(selection) {
     scope.length?'No facility reported a gap in this selection.':'There were no assessed facilities in this selection.';
   return {district,category,kind,groups,abstract,count,unique,assessed:scope.length,scopeLabel:[district,category,kind].join(' · ')};
 }
+function urgentNote(report) {
+  const stocks=report.groups.filter(urgency);
+  return stocks.length?'Urgent stock follow-up · '+stocks.map(g=>urgency(g)+' at '+g.count+' PHC'+(g.count===1?'':'s')).join(', '):'';
+}
 const summaryCols=['Indicator','PHCs','SCs','Affected','Eligible','Affected %','Missing'];
 function summaryValues(g) {
   return [g.name,g.phc,g.scCount,g.count,g.total,g.total?g.count/g.total:null,g.missing];
@@ -46,16 +50,20 @@ async function makeExcel(r) {
   await loadLibrary('exceljs.min.js');
   const book=new ExcelJS.Workbook();
   const summary=book.addWorksheet('Abstract',{views:[{state:'frozen',ySplit:6}]});
-  [48,12,12,14,14,14,14].forEach((w,i)=>summary.getColumn(i+1).width=w);
-  for(const [i,text] of ['District gap abstract',r.scopeLabel,'Assessment backup · 5 November 2026 · FY 2026–27',r.abstract,'Ordered by affected facilities. Missing includes unclear answers.'].entries()){
-    summary.mergeCells(i+1,1,i+1,7);
+  [48,12,12,14,14,17,14,23,18].forEach((w,i)=>summary.getColumn(i+1).width=w);
+  for(const [i,text] of ['District gap abstract',r.scopeLabel,'Assessment backup · 5 November 2026 · FY 2026–27',[r.abstract,urgentNote(r)].filter(Boolean).join('\n'),bandLegend+' · Missing includes unclear answers.'].entries()){
+    summary.mergeCells(i+1,1,i+1,9);
     const c=summary.getCell(i+1,1);c.value=text;c.alignment={wrapText:true,vertical:'middle'};
-    summary.getRow(i+1).height=i===3?40:23;
+    summary.getRow(i+1).height=i===3?58:23;
   }
   summary.getCell('A1').font={size:16,bold:true,color:{argb:'FF15574B'}};
-  sheetHeader(summary.addRow(summaryCols));
+  sheetHeader(summary.addRow([...summaryCols,'Prevalence','Urgent follow-up']));
   for(const group of r.groups){
-    const row=summary.addRow(summaryValues(group));row.getCell(6).numFmt='0.0%';row.getCell(1).alignment={wrapText:true};row.height=30;
+    const row=summary.addRow([...summaryValues(group),prevalence(group).label,urgency(group)?'Urgent · '+urgency(group):'']);
+    const fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF'+prevalence(group).color.slice(1)}};
+    row.getCell(6).fill=fill;row.getCell(8).fill=fill;
+    if(group.total===group.missing) row.getCell(6).value=null;
+    if(urgency(group)) row.getCell(9).font={bold:true,color:{argb:'FF862137'}};row.getCell(6).numFmt='0.0%';row.getCell(1).alignment={wrapText:true};row.height=30;
   }
   const details=book.addWorksheet('Facility details',{views:[{state:'frozen',ySplit:1}]});
   [24,34,47,24,22,29,11,30,68].forEach((w,i)=>details.getColumn(i+1).width=w);
@@ -77,10 +85,11 @@ function pdfTable(headers,rows,widths,caption) {
 async function makePdf(r) {
   await Promise.all([loadLibrary('pdfmake.min.js'),loadLibrary('report-fonts.js')]);
   const title=text=>({text,bold:true,fontSize:15,color:'#15574B',margin:[0,9,0,4]});
-  const content=[{text:'District gap abstract',bold:true,fontSize:22,color:'#15574B'},title(r.district),{text:r.category+' · '+r.kind,margin:[0,0,0,9]},r.abstract];
+  const content=[{text:'District gap abstract',bold:true,fontSize:22,color:'#15574B'},title(r.district),{text:r.category+' · '+r.kind,margin:[0,0,0,9]},r.abstract,{text:bandLegend,fontSize:9,margin:[0,5,0,3]}];
+  if(urgentNote(r))content.push({text:urgentNote(r),bold:true,color:'#862137',margin:[0,3,0,3]});
   const priority=r.groups.filter(g=>g.count).slice(0,8);
   if(priority.length){
-    content.push(title('Biggest reported gaps'),pdfTable(summaryCols,priority.map(g=>[g.name,g.phc,g.scCount,g.count,g.total,percent(g.count,g.total),g.missing]),['*',28,28,38,35,45,35]));
+    content.push(title('Biggest reported gaps'),pdfTable(summaryCols,priority.map(g=>[g.name,g.phc,g.scCount,g.count,g.total,{text:bandText(g),fillColor:prevalence(g).color},g.missing]),['*',25,25,35,32,80,34]));
     const blocks=new Map();
     for(const row of priority[0].rows) blocks.set(row[1]||'Block unrecorded',(blocks.get(row[1]||'Block unrecorded')||0)+1);
     content.push(title('Blocks to follow up first'),{text:priority[0].name+' · '+[...blocks].sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0])).slice(0,3).map(([b,n])=>b+' ('+n+')').join(', ')});
@@ -101,11 +110,13 @@ async function makePdf(r) {
   let first=true;
   for(const g of r.groups){
     if(!g.count)continue;
-    content.push({...title(g.name),...(first?{pageBreak:'before'}:{})},{text:g.category+' · '+g.count+' affected / '+g.total+' eligible · '+g.missing+' missing',fontSize:9,margin:[0,0,0,4]});
+    content.push({...title(g.name),...(first?{pageBreak:'before'}:{})},{text:(urgency(g)?'URGENT · ':'')+bandText(g)+' · '+g.category+' · '+g.count+' affected / '+g.total+' eligible · '+g.missing+' missing',fontSize:9,margin:[0,0,0,4]});
     first=false;
-    content.push(pdfTable(['Block','Facility','Type','Response','Facility remark'],g.rows.map(row=>evidenceCells(row,g.i).slice(1)),[67,92,25,87,'*'],g.name));
+    content.push(pdfTable(['Block','Facility','Type','Response','Facility remark'],g.rows.map(row=>evidenceCells(row,g.i).slice(1)),[67,92,25,87,'*'],(urgency(g)?'URGENT · ':'')+g.name));
   }
   if(!r.count)content.push(title('Facility details'),{text:'No reported gaps to list.'});
+  const zero=r.groups.filter(g=>!g.count);
+  if(zero.length) content.push(title('Indicators without reported gaps'),pdfTable(['Indicator','Eligible','Prevalence','Missing'],zero.map(g=>[g.name,g.total,{text:bandText(g),fillColor:prevalence(g).color},g.missing]),['*',45,100,45]));
   const doc={info:{title:r.scopeLabel+' · Gap report'},pageSize:'A4',pageMargins:[32,37,32,34],
     defaultStyle:{font:'Report',fontSize:10,color:'#18342F'},content,
     header:()=>({text:'FY 2026–27  /  '+r.district+'  /  Assessment backup of 5 November 2026',fontSize:8,margin:[32,14],color:'#47655C'}),

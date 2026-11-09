@@ -66,3 +66,17 @@ select:focus-visible { outline: 3px solid #b87924; outline-offset: 2px; }
   #list td { display: grid; grid-template-columns: minmax(83px, 34%) minmax(0, 1fr); gap: 9px; padding: 5px 0; border: 0; overflow-wrap: anywhere; }
   #list td::before { content: attr(data-label); font-size: 12px; color: #50675b; }
 }
+.rate-band,.urgent-tag {display:inline-block;padding:3px 7px;border-radius:5px;color:#26352e;font-weight:600;line-height:1.35}
+.urgent-box {border-left:4px solid #9d3042;padding:10px 12px;background:#fff1f2;margin-bottom:14px}
+.urgent-box strong {color:#7b1f31}
+.urgent-pick {margin:5px 4px 0 0;min-height:44px}
+.urgent-tag {background:#862137;color:white;font-size:12px}
+@media (max-width:600px) {
+  .gap-grid,.gap-grid tbody {display:block}
+  .gap-grid thead {position:absolute;clip-path:inset(50%);width:1px;height:1px;overflow:hidden}
+  .gap-grid tr {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:10px 4px;border-bottom:1px solid #ccd9d1}
+  #ranking .gap-grid td {border:0;padding:0;text-align:left;min-width:0;overflow-wrap:anywhere}
+  .gap-grid td:first-child {grid-column:1/-1}
+  .gap-grid td:not(:first-child)::before {content:attr(data-label);display:block;font-size:12px;color:#50675b}
+  .gap-grid td:has(.rate-band) {grid-column:span 2}
+}
