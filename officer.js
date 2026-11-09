@@ -5,6 +5,8 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 const option = value => '<option>'+esc(value)+'</option>';
 const params = new URLSearchParams(location.search);
 const mapping = params.get('view') === 'mapping';
+const abstractView = params.get('view') === 'abstract';
+const viewName = abstractView ? 'abstract' : mapping ? 'mapping' : 'gaps';
 const allDistricts = 'Maharashtra';
 let selected = Number(params.get('indicator') ?? -1);
 if (!Number.isInteger(selected) || !measures[selected]) selected = -1;
@@ -16,24 +18,27 @@ function restore(id) {
 }
 for (const id of ['district','kind','category','sort','status','response']) restore(id);
 $('search').value=params.get('search') || '';
-$(mapping?'mappingNav':'reviewNav').setAttribute('aria-current','page');
+$(abstractView?'abstractNav':mapping?'mappingNav':'reviewNav').setAttribute('aria-current','page');
 for (const id of ['kindLabel','categoryLabel','sortControl']) $(id).hidden=mapping;
 $('statusLabel').hidden=!mapping;
 $('responseLabel').hidden=mapping;
 function save() {
   const url = new URL(location.href);
   url.search = '';
-  url.searchParams.set('view',mapping?'mapping':'gaps');
+  url.searchParams.set('view',viewName);
   for (const id of ['district',...(mapping?['status']:['kind','category','sort','response']),'block']) {
     if ($(id).selectedIndex>0) url.searchParams.set(id,$(id).value);
   }
-  if (!mapping) url.searchParams.set('indicator',selected);
+  if (viewName==='gaps') url.searchParams.set('indicator',selected);
   if ($('search').value) url.searchParams.set('search',$('search').value);
   history.replaceState(null,'',url);
-  for (const [id,view] of [['reviewNav','gaps'],['mappingNav','mapping']]) {
+  for (const [id,view] of [['abstractNav','abstract'],['reviewNav','gaps'],['mappingNav','mapping']]) {
     const dest=new URL(location.pathname,location.href);
     dest.searchParams.set('view',view);
     if ($('district').selectedIndex>0) dest.searchParams.set('district',$('district').value);
+    if(!mapping && view!=='mapping') for(const filter of ['kind','category']) {
+      if($(filter).selectedIndex>0) dest.searchParams.set(filter,$(filter).value);
+    }
     $(id).href=dest;
   }
 }
@@ -116,6 +121,27 @@ function gapsView() {
   $('reportHint').textContent=$('district').selectedIndex?'Includes every reported gap for this district, category and facility type.':'Choose a district to download its report.';
   for (const button of $('downloads').querySelectorAll('button')) button.disabled=!$('district').selectedIndex || $('downloads').getAttribute('aria-busy')==='true';
   cards([[scope.length,'Assessed facilities'],[scope.filter(r=>ranked.some(m=>r[4][m.i]==='1')).length,'Facilities with at least one selected gap'],[scope.filter(r=>ranked.some(m=>r[4][m.i]==='?')).length,'Facilities missing at least one selected response']]);
+  if(abstractView) {
+    $('detail').hidden=true;
+    $('sortControl').hidden=true;
+    $('rankTitle').textContent=$('district').value+' assessment abstract';
+    const gaps=[...ranked].sort((a,b)=>b.count-a.count || a.name.localeCompare(b.name));
+    const biggest=gaps.filter(m=>m.count).slice(0,8);
+    $('definition').textContent=biggest.length?'Biggest reported gaps by number of affected facilities. Select an indicator to see the facility names and remarks.':scope.length?'No gaps were reported for this selection.':'No eligible assessments in this selection.';
+    function facilityLink(m,label) {
+      const link=new URL(location.href);
+      link.search='';
+      link.searchParams.set('view','gaps');
+      link.searchParams.set('indicator',m.i);
+      for(const id of ['district','kind','category']) if($(id).selectedIndex>0) link.searchParams.set(id,$(id).value);
+      link.hash='detail';
+      return '<a href="'+esc(link.href)+'">'+esc(label)+'</a>';
+    }
+    const urgent=gaps.filter(urgency);
+    const alerts=urgent.length?'<aside class="urgent-box"><strong>Urgent stock follow-up</strong><ul>'+urgent.map(m=>'<li>'+facilityLink(m,urgency(m)+' stock-out · '+fmt(m.count)+' PHCs')+'</li>').join('')+'</ul></aside>':'';
+    $('ranking').innerHTML=alerts+'<ol class="abstract-gaps">'+biggest.map(m=>'<li>'+facilityLink(m,m.name)+'<div><span class="rate-band" style="background:'+prevalence(m).color+'">'+bandText(m)+'</span> '+fmt(m.count)+' of '+fmt(m.total)+' eligible · '+fmt(m.missing)+' missing</div></li>').join('')+'</ol>';
+    return;
+  }
   $('rankTitle').textContent='Gap priorities';
   $('definition').textContent='Compare affected counts for workload and percentages for prevalence. Each rate uses eligible assessed facilities. Select a category, measure or district to inspect its facility records.';
   if(!ranked.some(m=>m.i===selected)) selected=ranked[0].i;
@@ -169,6 +195,7 @@ function renderList() {
 function render() {
   const block=$('block').value || params.get('block');
   if(mapping) mappingView(); else gapsView();
+  if(abstractView) { save(); return; }
   detailRows.sort((a,b)=>a[0].localeCompare(b[0]) || (a[1]||'').localeCompare(b[1]||'') || a[2].localeCompare(b[2]));
   const blocks=[...new Set(detailRows.map(r=>r[1]).filter(Boolean))].sort();
   $('block').innerHTML=['All blocks',...blocks].map(option).join('');
