@@ -117,7 +117,8 @@ function gapsView() {
   const rank=(a,b)=>score(b)-score(a) || b.count-a.count || a.name.localeCompare(b.name);
   ranked.sort(rank);
   exportScope={district:$('district').value,category:$('category').value,kind:$('kind').value,scope,ranked};
-  $('downloads').hidden=mapping;
+  $('downloads').hidden=mapping || abstractView;
+  $('abstractDownload').hidden=!abstractView;
   $('reportHint').textContent=$('district').selectedIndex?'Includes every reported gap for this district, category and facility type.':'Choose a district to download its report.';
   for (const button of $('downloads').querySelectorAll('button')) button.disabled=!$('district').selectedIndex || $('downloads').getAttribute('aria-busy')==='true';
   cards([[scope.length,'Assessed facilities'],[scope.filter(r=>ranked.some(m=>r[4][m.i]==='1')).length,'Facilities with at least one selected gap'],[scope.filter(r=>ranked.some(m=>r[4][m.i]==='?')).length,'Facilities missing at least one selected response']]);

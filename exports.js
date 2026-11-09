@@ -117,11 +117,14 @@ async function makePdf(r) {
   if(!r.count)content.push(title('Facility details'),{text:'No reported gaps to list.'});
   const zero=r.groups.filter(g=>!g.count);
   if(zero.length) content.push(title('Indicators without reported gaps'),pdfTable(['Indicator','Eligible','Prevalence','Missing'],zero.map(g=>[g.name,g.total,{text:bandText(g),fillColor:prevalence(g).color},g.missing]),['*',45,100,45]));
-  const doc={info:{title:r.scopeLabel+' · Gap report'},pageSize:'A4',pageMargins:[32,37,32,34],
+  return renderReportPdf(r,content,'Gap report');
+}
+function renderReportPdf(r,content,name) {
+  const doc={info:{title:r.scopeLabel+' · '+name},pageSize:'A4',pageMargins:[32,37,32,34],
     defaultStyle:{font:'Report',fontSize:10,color:'#18342F'},content,
     header:()=>({text:'FY 2026–27  /  '+r.district+'  /  Assessment backup of 5 November 2026',fontSize:8,margin:[32,14],color:'#47655C'}),
     footer:(page,total)=>({text:r.district+'  ·  '+page+' / '+total,alignment:'right',fontSize:8,margin:[32,9]})};
-  return await new Promise((resolve,reject)=>{
+  return new Promise((resolve,reject)=>{
     try{pdfMake.createPdf(doc,null,{Report:{normal:'regular.ttf',bold:'bold.ttf',italics:'regular.ttf',bolditalics:'bold.ttf'}},reportFonts).getBlob(resolve);}
     catch(err){reject(err);}
   });
@@ -143,3 +146,38 @@ async function exportDistrict(format) {
 }
 $('downloadPdf').onclick=()=>exportDistrict('PDF');
 $('downloadExcel').onclick=()=>exportDistrict('Excel');
+
+async function downloadAbstract() {
+  const button=$('downloadAbstract');
+  if(button.disabled || !exportScope) return;
+  button.disabled=true;
+  const {district,category,kind,scope,ranked}=exportScope;
+  const status=$('abstractStatus');
+  status.textContent='Preparing '+district+' abstract…';
+  try {
+    await Promise.all([loadLibrary('pdfmake.min.js'),loadLibrary('report-fonts.js')]);
+    const affected=scope.filter(row=>ranked.some(m=>row[4][m.i]==='1')).length;
+    const missing=scope.filter(row=>ranked.some(m=>row[4][m.i]==='?')).length;
+    const content=[
+      {text:district+' assessment abstract',bold:true,fontSize:20,color:'#15574B'},
+      {text:category+' · '+kind,margin:[0,3,0,10]},
+      {text:scope.length?fmt(affected)+' of '+fmt(scope.length)+' assessed facilities reported at least one gap. '+fmt(missing)+' facilities had at least one missing or unclear response.':'No eligible assessments in this selection.'}
+    ];
+    const urgent=urgentNote({groups:ranked});
+    if(urgent)content.push({text:urgent,bold:true,color:'#862137',margin:[0,8,0,0]});
+    const priority=ranked.filter(m=>m.count).sort((a,b)=>b.count-a.count || a.name.localeCompare(b.name)).slice(0,8);
+    if(priority.length){
+      const rows=priority.map(m=>{
+        const phcs=scope.filter(row=>row[3]==='PHC' && row[4][m.i]==='1').length;
+        return [m.name,phcs,m.count-phcs,m.count,m.total,{text:bandText(m),fillColor:prevalence(m).color},m.missing];
+      });
+      content.push({text:'Biggest reported gaps',bold:true,fontSize:15,margin:[0,12,0,5]},pdfTable(summaryCols,rows,['*',25,25,35,32,80,34]),{text:bandLegend,fontSize:9,margin:[0,8,0,0]});
+    }
+    const report={district,scopeLabel:[district,category,kind].join(' · ')};
+    const blob=await renderReportPdf(report,content,'Assessment abstract');
+    downloadBlob(blob,[district,category,kind,'abstract-2026-11-05'].join('-').replace(/[^\p{L}\p{N}-]+/gu,'-')+'.pdf');
+    status.textContent=district+' abstract ready.';
+  } catch(error){status.textContent='Download failed. '+error.message;}
+  finally{button.disabled=false;}
+}
+$('downloadAbstract').onclick=downloadAbstract;

@@ -84,3 +84,6 @@ select:focus-visible { outline: 3px solid #b87924; outline-offset: 2px; }
 .abstract-gaps { padding-inline-start: 26px; }
 .abstract-gaps li { padding: 9px 0; border-bottom: 1px solid #dce3dc; }
 .abstract-gaps li div { margin-top: 4px; font-size: 14px; }
+
+#downloadAbstract { min-height: 48px; }
+@media(max-width:600px) { #downloadAbstract { width:100%; } }
