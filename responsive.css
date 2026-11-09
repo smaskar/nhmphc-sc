@@ -1,0 +1,50 @@
+/* Keep the platform picker for touch and keyboard input. */
+label select, .wrap select {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 9px 38px 9px 12px;
+  border: 1px solid #819b90;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1.35;
+  color: var(--fg, #183c32);
+  background-color: var(--panel, white);
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 18px center, right 12px center;
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+select:focus-visible { outline: 3px solid #b87924; outline-offset: 2px; }
+.controls label { min-width: 0; }
+#exportStatus:empty { display: none; }
+@media (forced-colors: active) {
+  label select, .wrap select { appearance: auto; background-image: none; }
+}
+@media (max-width: 600px) {
+  main { padding: 12px 14px 40px; }
+  header { padding-block: 18px; }
+  nav { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  nav a.pill { text-align: center; min-height: 44px; padding-inline: 4px; }
+  nav a:last-child { grid-column: 1 / -1; }
+  .controls { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .controls label { max-width: none; }
+  label input { font-size: 16px; min-height: 48px; }
+  #downloads button, .pager button, .chip { min-height: 44px; }
+  #downloads button { width: calc(50% - 4px); }
+  .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpis article { padding: 10px 7px; }
+  .kpis b { font-size: clamp(20px, 5.8vw, 30px); }
+  .kpis small { display: block; font-size: 12px; line-height: 1.35; margin-top: 4px; }
+  .panel { padding: 10px; }
+  .scroll { overscroll-behavior-x: contain; }
+  #ranking th, #ranking td { vertical-align: top; }
+  #list table, #list tbody, #list tr { display: block; }
+  #list thead { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
+  #list tr { margin: 8px 0; padding: 8px; border: 1px solid #ccd9d1; border-radius: 8px; }
+  #list td { display: grid; grid-template-columns: minmax(83px, 34%) minmax(0, 1fr); gap: 9px; padding: 5px 0; border: 0; overflow-wrap: anywhere; }
+  #list td::before { content: attr(data-label); font-size: 12px; color: #50675b; }
+}

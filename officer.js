@@ -125,7 +125,8 @@ function renderList() {
   const pages=Math.max(1,Math.ceil(rows.length/25));
   page=Math.min(page,pages-1);
   $('listCount').textContent=fmt(rows.length)+' matching '+(mapping?'subcentres':'facilities');
-  $('list').innerHTML=rows.length?table(mapping?['District','Block','Subcentre','Recorded parent','Status','Matched or candidate PHC']:['District','Block','Facility','Type','Assessment response','Facility remark'],rows.slice(25*page,25*(page+1)).map(r=>'<tr>'+(mapping?r:evidenceCells(r)).map(v=>cell(v||'—')).join('')+'</tr>')):'<p>No facilities match these filters.</p>';
+  const columns=mapping?['District','Block','Subcentre','Recorded parent','Status','Matched or candidate PHC']:['District','Block','Facility','Type','Assessment response','Facility remark'];
+  $('list').innerHTML=rows.length?table(columns,rows.slice(25*page,25*(page+1)).map(r=>'<tr>'+(mapping?r:evidenceCells(r)).map((v,i)=>'<td data-label="'+esc(columns[i])+'">'+esc(v||'—')+'</td>').join('')+'</tr>')):'<p>No facilities match these filters.</p>';
   $('prev').disabled=!page; $('next').disabled=page>=pages-1; $('page').textContent=(page+1)+' / '+pages;
 }
 function render() {
