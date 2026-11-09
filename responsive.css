@@ -92,3 +92,9 @@ select:focus-visible { outline: 3px solid #b87924; outline-offset: 2px; }
 
 .abstract-bar { height:8px; background:#e4ece8; border-radius:4px; overflow:hidden; }
 .abstract-bar i { display:block; height:100%; background:#286957; }
+
+#comparisonBars {max-height:33rem;overflow-y:auto;padding-inline-end:6px}
+.comparison-row {position:relative;padding:10px 4px;border-bottom:1px solid #dce3dc;font-size:14px}
+.comparison-row .abstract-bar {margin:5px 0}
+.comparison-row a::after {content:"";position:absolute;inset:0}
+.comparison-row:focus-within {outline:2px solid #976d17;outline-offset:-2px}

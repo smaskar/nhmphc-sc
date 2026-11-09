@@ -29,6 +29,10 @@ function save() {
   for (const id of ['district',...(mapping?['status']:['kind','category','sort','response']),'block']) {
     if ($(id).selectedIndex>0) url.searchParams.set(id,$(id).value);
   }
+  if (abstractView && !$('district').selectedIndex) {
+    url.searchParams.set('compare',$('compareIndicator').value);
+    if($('compareBy').value==='rate') url.searchParams.set('compareBy','rate');
+  }
   if (viewName==='gaps') url.searchParams.set('indicator',selected);
   if ($('search').value) url.searchParams.set('search',$('search').value);
   history.replaceState(null,'',url);
@@ -96,6 +100,36 @@ function mappingView() {
   $('detailNote').textContent='Backup match identifies a unique PHC. Check spelling means a possible PHC needs verification. Confirm parent means the district must supply the link.';
   detailRows=scope;
 }
+function facilityHref(indicator,district) {
+  const link=new URL(location.pathname,location.href);
+  link.searchParams.set('view','gaps');
+  link.searchParams.set('indicator',indicator);
+  if(district!==allDistricts) link.searchParams.set('district',district);
+  for(const id of ['kind','category']) if($(id).selectedIndex>0) link.searchParams.set(id,$(id).value);
+  link.hash='detail';
+  return link.href;
+}
+function renderComparison() {
+  const indicator=Number($('compareIndicator').value);
+  const byDistrict=new Map(districts.map(name=>[name,{name,count:0,total:0,missing:0}]));
+  for(const facility of exportScope.scope) {
+    const state=facility[4][indicator];
+    if(state==='-') continue;
+    const district=byDistrict.get(facility[0]);
+    district.total++;
+    if(state==='1') district.count++;
+    if(state==='?') district.missing++;
+  }
+  const byRate=$('compareBy').value==='rate';
+  const usable=d=>d.total>d.missing;
+  const score=d=>byRate && d.total?d.count/d.total:d.count;
+  const rows=[...byDistrict.values()].sort((a,b)=>Number(usable(b))-Number(usable(a)) || score(b)-score(a) || b.count-a.count || a.name.localeCompare(b.name));
+  const max=byRate?1:Math.max(1,...rows.map(d=>d.count));
+  $('comparisonBars').innerHTML=rows.map(d=>{
+    const name=d.count?'<a href="'+esc(facilityHref(indicator,d.name))+'">'+esc(d.name)+'</a>':esc(d.name);
+    return '<div class="comparison-row"><strong>'+name+'</strong><div class="abstract-bar" aria-hidden="true"><i style="width:'+100*score(d)/max+'%"></i></div><div><span class="rate-band" style="background:'+prevalence(d).color+'">'+bandText(d)+'</span> '+fmt(d.count)+' affected / '+fmt(d.total)+' eligible · '+fmt(d.missing)+' missing</div></div>';
+  }).join('');
+}
 function gapsView() {
   const scope=facilities.filter(r=>selectedDistrict(r) && (!$('kind').selectedIndex || r[3]===$('kind').value));
   const available=measures.map(([category,name,sc],i)=>({category,name,sc,i})).filter(m=>$('kind').value!=='SC' || m.sc);
@@ -130,13 +164,15 @@ function gapsView() {
     const biggest=gaps.filter(m=>m.count).slice(0,8);
     $('definition').textContent=biggest.length?'Biggest reported gaps by number of affected facilities. Bar length shows affected facilities. Select an indicator to see facility names and remarks.':scope.length?'No gaps were reported for this selection.':'No eligible assessments in this selection.';
     function facilityLink(m,label) {
-      const link=new URL(location.href);
-      link.search='';
-      link.searchParams.set('view','gaps');
-      link.searchParams.set('indicator',m.i);
-      for(const id of ['district','kind','category']) if($(id).selectedIndex>0) link.searchParams.set(id,$(id).value);
-      link.hash='detail';
-      return '<a href="'+esc(link.href)+'">'+esc(label)+'</a>';
+      return '<a href="'+esc(facilityHref(m.i,$('district').value))+'">'+esc(label)+'</a>';
+    }
+    $('district-comparison').hidden=$('district').selectedIndex!==0;
+    if(!$('district-comparison').hidden) {
+      const picker=$('compareIndicator');
+      const previous=picker.value || params.get('compare');
+      picker.innerHTML=[...gaps].sort((a,b)=>a.name.localeCompare(b.name)).map(m=>'<option value="'+m.i+'">'+esc(m.name)+'</option>').join('');
+      picker.value=gaps.some(m=>String(m.i)===previous)?previous:String(gaps[0].i);
+      renderComparison();
     }
     const urgent=gaps.filter(urgency);
     const alerts=urgent.length?'<aside class="urgent-box"><strong>Urgent stock follow-up</strong><ul>'+urgent.map(m=>'<li>'+facilityLink(m,urgency(m)+' stock-out · '+fmt(m.count)+' PHCs')+'</li>').join('')+'</ul></aside>':'';
@@ -217,4 +253,6 @@ $('ranking').onclick=e=>{
 for (const id of ['district','category','kind','sort','response']) $(id).onchange=()=>{page=0;$('block').selectedIndex=0;render();};
 for (const id of ['status','block','search']) $(id).addEventListener(id==='search'?'input':'change',()=>{page=0;renderList();save();});
 $('prev').onclick=()=>{page--;renderList();};$('next').onclick=()=>{page++;renderList();};
+if(params.get('compareBy')==='rate') $('compareBy').value='rate';
+for(const id of ['compareIndicator','compareBy']) $(id).onchange=()=>{renderComparison();save();};
 render();
