@@ -107,6 +107,7 @@ details p{margin:8px 0 0;color:var(--muted);font-size:13px}
   </section>
 
   <section id="v-problem" hidden>
+    <button class="chip" id="back" style="margin-top:4px"></button>
     <label class="lbl" for="psel">Problem</label>
     <select id="psel"></select>
     <div class="stats" id="pstats"></div>
@@ -169,9 +170,9 @@ function itemHTML(i, v, st, compare) {
     diff = d === 0 ? '<span>Same as state</span>' : d > 0 ? `<span class="worse">${d} pts worse than state</span>` : `<span class="better">${-d} pts better than state</span>`;
   } else if (!compare) diff = '<span>Maharashtra level</span>';
   const tick = compare && st !== null ? `<span class="tick" style="left:calc(${Math.min(st / 10, 100)}% - 1px)"></span>` : '';
-  return `<div class="row"><div class="top"><span class="name">${esc(D.inds[i][1])}</span><span class="val">${pct(v)}</span></div>
+  return `<button class="row" data-p="${i}" aria-label="${esc(D.inds[i][1])}: see all districts"><div class="top"><span class="name">${esc(D.inds[i][1])}</span><span class="val">${pct(v)}</span></div>
     <div class="bar" aria-hidden="true"><span class="fill ${b}" style="width:${Math.max(v / 10, 1)}%"></span>${tick}</div>
-    <div class="sub">${diff}<span>${esc(D.secs[D.inds[i][0]])}</span></div></div>`;
+    <div class="sub">${diff}<span>All districts ›</span></div></button>`;
 }
 
 function renderDistrict() {
@@ -205,6 +206,7 @@ function renderDistrict() {
 
 function renderProblem() {
   $('psel').value = prob;
+  $('back').textContent = '‹ Back to ' + D.dists[dist][0];
   const st = D.m[0][prob];
   const rows = [];
   for (let d = 1; d < ND; d++) if (D.m[d][prob] !== null) rows.push([d, D.m[d][prob]]);
@@ -239,19 +241,23 @@ function show(v) {
     $('tab-' + k).setAttribute('aria-selected', k === v);
   }
   if (v === 'district') renderDistrict(); else if (v === 'problem') renderProblem(); else renderRanking();
-  const h = v === 'district' ? (dist ? 'd-' + slug(D.dists[dist][0]) : '') : v;
+  const h = v === 'district' ? (dist ? 'd-' + slug(D.dists[dist][0]) : '') : v === 'problem' ? 'p-' + prob : v;
   if (('#' + h) !== location.hash && (h || location.hash)) history.replaceState(null, '', '#' + h);
   window.scrollTo(0, 0);
 }
 function fromHash() {
   const h = location.hash.slice(1);
-  if (h === 'problem' || h === 'ranking') return show(h);
+  if (h === 'ranking') return show(h);
+  if (h === 'problem') return show('problem');
+  if (/^p-[0-9]+$/.test(h) && +h.slice(2) < NI) { prob = +h.slice(2); return show('problem'); }
   if (h.startsWith('d-')) { const i = D.dists.findIndex((x) => slug(x[0]) === h.slice(2)); if (i > 0) dist = i; }
   show('district');
 }
 document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => show(t.dataset.view)));
 $('dsel').addEventListener('change', (e) => { dist = +e.target.value; area = 'ALL'; show('district'); });
-$('psel').addEventListener('change', (e) => { prob = +e.target.value; renderProblem(); });
+$('psel').addEventListener('change', (e) => { prob = +e.target.value; show('problem'); });
+$('back').addEventListener('click', () => show('district'));
+$('dlist').addEventListener('click', (e) => { const r = e.target.closest('[data-p]'); if (r) { prob = +r.dataset.p; show('problem'); } });
 $('chips').addEventListener('click', (e) => { const c = e.target.closest('.chip'); if (c) { area = c.dataset.area; renderDistrict(); } });
 for (const id of ['plist', 'rlist']) $(id).addEventListener('click', (e) => { const r = e.target.closest('[data-d]'); if (r) { dist = +r.dataset.d; area = 'ALL'; show('district'); } });
 window.addEventListener('hashchange', fromHash);
