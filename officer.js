@@ -8,7 +8,7 @@ const mapping = params.get('view') === 'mapping';
 const allDistricts = 'Maharashtra';
 let selected = Number(params.get('indicator') ?? -1);
 if (!Number.isInteger(selected) || !measures[selected]) selected = -1;
-let page = 0, detailRows = [];
+let page = 0, detailRows = [], exportScope;
 $('district').innerHTML = [allDistricts,...districts].map(option).join('');
 $('category').insertAdjacentHTML('beforeend',[...new Set(measures.map(m=>m[0]))].map(option).join(''));
 function restore(id) {
@@ -86,6 +86,10 @@ function gapsView() {
   const score=m=>$('sort').value==='rate'?(m.total?m.count/m.total:-1):m.count;
   const rank=(a,b)=>score(b)-score(a) || b.count-a.count || a.name.localeCompare(b.name);
   ranked.sort(rank);
+  exportScope={district:$('district').value,category:$('category').value,kind:$('kind').value,scope,ranked};
+  $('downloads').hidden=mapping;
+  $('reportHint').textContent=$('district').selectedIndex?'Includes every reported gap for this district, category and facility type.':'Choose a district to download its report.';
+  for (const button of $('downloads').querySelectorAll('button')) button.disabled=!$('district').selectedIndex || $('downloads').getAttribute('aria-busy')==='true';
   cards([[scope.length,'Assessed facilities'],[scope.filter(r=>ranked.some(m=>r[4][m.i]==='1')).length,'Facilities with at least one selected gap'],[scope.filter(r=>ranked.some(m=>r[4][m.i]==='?')).length,'Facilities missing at least one selected response']]);
   $('rankTitle').textContent='Gap priorities';
   $('definition').textContent='Compare affected counts for workload and percentages for prevalence. Each rate uses eligible assessed facilities. Select a category, measure or district to inspect its facility records.';
@@ -111,9 +115,9 @@ function gapsView() {
   $('detailTitle').textContent=m.name;
   $('detailNote').textContent=$('district').value+' · '+fmt(m.count)+' affected of '+fmt(m.total)+' eligible assessed facilities · '+fmt(m.missing)+' missing or unclear.';
 }
-function evidenceCells(row) {
-  const [value,remark]=row[5][selected] || [0,0];
-  return [...row.slice(0,4),officerData.texts[value] || (row[4][selected]==='?'?'Missing or unclear':'Reported gap'),officerData.texts[remark] || 'No recorded remark'];
+function evidenceCells(row, index=selected) {
+  const [value,remark]=row[5][index] || [0,0];
+  return [...row.slice(0,4),officerData.texts[value] || (row[4][index]==='?'?'Missing or unclear':'Reported gap'),officerData.texts[remark] || 'No recorded remark'];
 }
 function renderList() {
   const term=$('search').value.toLocaleLowerCase().trim();

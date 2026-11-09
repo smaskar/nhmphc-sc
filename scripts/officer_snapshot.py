@@ -123,8 +123,9 @@ payload=dict(districts=districts,reviews=reviews,facilities=facilities,measures=
 if private_dir:
     import shutil
     private_dir.mkdir(parents=True,exist_ok=True,mode=0o700)
-    for filename in ('index.html','officer.js','explorer.html','snapshot.js'):
+    for filename in ('index.html','officer.js','exports.js','explorer.html','snapshot.js'):
         shutil.copy2(site/filename,private_dir/filename)
+    shutil.copytree(site/'vendor',private_dir/'vendor',dirs_exist_ok=True)
     page=private_dir/'index.html'
     page.write_text(page.read_text().replace('Officer overview · Backup','Local officer copy with original remarks · Backup'))
 ((private_dir or site)/'officer-data.js').write_text('const officerData = '+json.dumps(payload,separators=(',',':'),ensure_ascii=False)+';\n')
