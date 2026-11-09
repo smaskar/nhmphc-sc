@@ -10,7 +10,7 @@ const viewName = abstractView ? 'abstract' : mapping ? 'mapping' : 'gaps';
 const allDistricts = 'Maharashtra';
 let selected = Number(params.get('indicator') ?? -1);
 if (!Number.isInteger(selected) || !measures[selected]) selected = -1;
-let page = 0, detailRows = [], exportScope;
+let page = 0, detailRows = [], exportScope, comparisonScope;
 $('district').innerHTML = [allDistricts,...districts].map(option).join('');
 $('category').insertAdjacentHTML('beforeend',[...new Set(measures.map(m=>m[0]))].map(option).join(''));
 function restore(id) {
@@ -125,6 +125,7 @@ function renderComparison() {
   const score=d=>byRate && d.total?d.count/d.total:d.count;
   const rows=[...byDistrict.values()].sort((a,b)=>Number(usable(b))-Number(usable(a)) || score(b)-score(a) || b.count-a.count || a.name.localeCompare(b.name));
   const max=byRate?1:Math.max(1,...rows.map(d=>d.count));
+  comparisonScope={indicator,rows,byRate,max,scope:exportScope.scope,kind:exportScope.kind};
   $('comparisonBars').innerHTML=rows.map(d=>{
     const name=d.count?'<a href="'+esc(facilityHref(indicator,d.name))+'">'+esc(d.name)+'</a>':esc(d.name);
     return '<div class="comparison-row"><strong>'+name+'</strong><div class="abstract-bar" aria-hidden="true"><i style="width:'+100*score(d)/max+'%"></i></div><div><span class="rate-band" style="background:'+prevalence(d).color+'">'+bandText(d)+'</span> '+fmt(d.count)+' affected / '+fmt(d.total)+' eligible · '+fmt(d.missing)+' missing</div></div>';

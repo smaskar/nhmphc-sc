@@ -183,3 +183,102 @@ async function downloadAbstract() {
   finally{button.disabled=false;}
 }
 $('downloadAbstract').onclick=downloadAbstract;
+
+function comparisonReport(selection) {
+  const {indicator,rows,byRate,max,scope,kind}=selection;
+  const grouped=new Map(rows.map(d=>[d.name,[]]));
+  for(const facility of scope) {
+    if(facility[4][indicator]==='1') grouped.get(facility[0]).push(evidenceCells(facility,indicator));
+  }
+  const districts=rows.map(d=>{
+    const records=grouped.get(d.name).sort((a,b)=>a[1].localeCompare(b[1]) || a[2].localeCompare(b[2]) || a[3].localeCompare(b[3]));
+    const phcs=records.filter(r=>r[3]==='PHC').length;
+    const value=byRate && d.total?d.count/d.total:d.count;
+    const label=d.total===d.missing?prevalence(d).label:byRate?percent(d.count,d.total):fmt(d.count);
+    return {...d,records,phcs,scs:d.count-phcs,fraction:value/max,label};
+  });
+  const name=measures[indicator][1], metric=byRate?'Percentage affected':'Number affected';
+  return {district:'Maharashtra',scopeLabel:name,name,metric,kind,districts};
+}
+const comparisonColumns=['District','PHCs affected','SCs affected','Affected','Eligible','Affected %','Prevalence','Missing'];
+function comparisonCountRow(d) {
+  return [d.name,d.phcs,d.scs,d.count,d.total,d.total>d.missing?d.count/d.total:null,prevalence(d).label,d.missing];
+}
+async function comparisonPDF(r) {
+  await Promise.all([loadLibrary('pdfmake.min.js'),loadLibrary('report-fonts.js')]);
+  const title=text=>({text,fontSize:16,bold:true,color:'#15574B',margin:[0,0,0,5]});
+  const chart=r.districts.map(d=>[d.name,{canvas:[
+    {type:'rect',x:0,y:3,w:190,h:5,color:'#E4ECE8'},
+    {type:'rect',x:0,y:3,w:190*d.fraction,h:5,color:'#286957'}
+  ]},d.label]);
+  const content=[title(r.name),{text:'Maharashtra district comparison · '+r.kind+' · '+r.metric,margin:[0,0,0,7]},
+    {fontSize:8,table:{widths:['*',195,86],body:chart},layout:'noBorders'},
+    {...title('District counts'),pageBreak:'before'},
+    pdfTable(comparisonColumns,r.districts.map(d=>[d.name,d.phcs,d.scs,d.count,d.total,d.total>d.missing?percent(d.count,d.total):'—',{text:prevalence(d).label,fillColor:prevalence(d).color},d.missing]),['*',38,34,38,35,44,76,38])];
+  let first=true;
+  for(const d of r.districts){
+    if(!d.records.length) continue;
+    if(first) content.push({...title('Affected facilities'),pageBreak:'before'});
+    first=false;
+    content.push(pdfTable(['Block','Facility','Type','Response','Facility remark'],d.records.map(row=>row.slice(1)),[65,95,25,80,'*'],d.name+' · '+fmt(d.count)+' affected · '+r.name));
+  }
+  if(first)content.push({text:'No affected facilities were reported.',margin:[0,10]});
+  return renderReportPdf(r,content,'District comparison');
+}
+function comparisonChartImage(r) {
+  const canvas=document.createElement('canvas');
+  canvas.width=940;canvas.height=32*r.districts.length+12;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.font='17px sans-serif';ctx.textBaseline='middle';
+  r.districts.forEach((d,i)=>{
+    const y=10+i*32;
+    ctx.fillStyle='#18342f';ctx.fillText(d.name,8,y+8);
+    ctx.fillStyle='#e4ece8';ctx.fillRect(245,y,460,16);
+    ctx.fillStyle='#286957';ctx.fillRect(245,y,460*d.fraction,16);
+    ctx.fillStyle='#18342f';ctx.fillText(d.label,718,y+8);
+  });
+  return canvas;
+}
+async function comparisonExcel(r) {
+  await loadLibrary('exceljs.min.js');
+  const book=new ExcelJS.Workbook(),chart=book.addWorksheet('District chart');
+  for(let col=1;col<=10;col++) chart.getColumn(col).width=13;
+  chart.mergeCells('A1:J1');chart.mergeCells('A2:J2');
+  chart.properties.defaultRowHeight=24;
+  chart.getCell('A1').value=r.name;chart.getCell('A1').font={bold:true,size:17,color:{argb:'FF15574B'}};
+  chart.getCell('A2').value=r.kind+' · '+r.metric+' · Assessment backup of 5 November 2026';
+  const canvas=comparisonChartImage(r);
+  const image=book.addImage({base64:canvas.toDataURL('image/png'),extension:'png'});
+  chart.addImage(image,{tl:{col:0,row:3},br:{col:10,row:3+canvas.height/32},editAs:'oneCell'});
+  const counts=book.addWorksheet('District counts',{views:[{state:'frozen',ySplit:1}]});
+  [31,17,16,14,14,14,23,14].forEach((w,i)=>counts.getColumn(i+1).width=w);
+  sheetHeader(counts.addRow(comparisonColumns));
+  const details=book.addWorksheet('Affected facilities',{views:[{state:'frozen',ySplit:1}]});
+  [31,24,34,12,28,72].forEach((w,i)=>details.getColumn(i+1).width=w);
+  sheetHeader(details.addRow(['District','Block','Facility name','Type','Assessment response','Facility remark']));
+  for(const d of r.districts){
+    const row=counts.addRow(comparisonCountRow(d));row.getCell(6).numFmt='0.0%';
+    row.getCell(7).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF'+prevalence(d).color.slice(1)}};
+    for(const facility of d.records) details.addRow(facility).alignment={vertical:'top',wrapText:true};
+  }
+  counts.autoFilter='A1:H'+counts.rowCount;details.autoFilter='A1:F'+details.rowCount;
+  return new Blob([await book.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+async function downloadComparison(format){
+  const buttons=Array.from($('comparisonDownloads').querySelectorAll('button'));
+  if(!comparisonScope || buttons.some(b=>b.disabled)) return;
+  buttons.forEach(b=>b.disabled=true);
+  const status=$('comparisonStatus');
+  try{
+    const r=comparisonReport(comparisonScope);
+    status.textContent='Preparing '+format+' for '+r.name+'…';
+    const blob=format==='PDF'?await comparisonPDF(r):await comparisonExcel(r);
+    const filename=['Maharashtra',r.name,r.kind,r.metric,'2026-11-05'].join('-').replace(/[^\p{L}\p{N}-]+/gu,'-');
+    downloadBlob(blob,filename+(format==='PDF'?'.pdf':'.xlsx'));
+    status.textContent=format+' ready · '+r.name;
+  }catch(error){status.textContent='Download failed. '+error.message;}
+  finally{buttons.forEach(b=>b.disabled=false);}
+}
+$('comparisonPdf').onclick=()=>downloadComparison('PDF');
+$('comparisonExcel').onclick=()=>downloadComparison('Excel');

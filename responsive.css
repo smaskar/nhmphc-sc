@@ -98,3 +98,7 @@ select:focus-visible { outline: 3px solid #b87924; outline-offset: 2px; }
 .comparison-row .abstract-bar {margin:5px 0}
 .comparison-row a::after {content:"";position:absolute;inset:0}
 .comparison-row:focus-within {outline:2px solid #976d17;outline-offset:-2px}
+
+#comparisonDownloads button {min-height:44px;margin-bottom:5px}
+#comparisonStatus:empty {display:none}
+@media(max-width:600px){#comparisonDownloads button{width:100%}}
