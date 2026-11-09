@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="Phone-friendly view of PHC assessment gaps across Maharashtra districts, FY 2026-27.">
-<title>PHC Gap Finder</title>
+<title>PHC and Subcentre Gap Finder</title>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap">
 <style>
@@ -88,10 +88,11 @@ details p{margin:8px 0 0;color:var(--muted);font-size:13px}
 <body>
 
 <header><div class="in">
-  <h1>PHC Gap Finder</h1>
-  <p id="sub">Maharashtra, FY 2026–27. Each number is the share of assessed PHCs with the problem. Higher is worse.</p>
+  <h1>PHC and Subcentre Gap Finder</h1>
+  <p id="sub">Maharashtra · FY 2026–27 · Assessment backup of 5 November 2026</p>
 </div></header>
 <div class="wrap">
+  <label class="lbl" for="facility">Facility type</label><select id="facility"><option value="phc">Primary health centres</option><option value="sc">Subcentres</option></select>
   <div class="tabs" role="tablist" aria-label="View">
     <button class="tab" role="tab" id="tab-district" data-view="district" aria-selected="true">By district</button>
     <button class="tab" role="tab" id="tab-problem" data-view="problem" aria-selected="false">By problem</button>
@@ -103,7 +104,7 @@ details p{margin:8px 0 0;color:var(--muted);font-size:13px}
     <select id="dsel"></select>
     <div class="stats" id="stats"></div>
     <div class="chips" id="chips" role="group" aria-label="Filter by area"></div>
-    <div id="dlist"></div>
+    <div id="dlist"></div><section id="volume"></section><section id="links"></section>
   </section>
 
   <section id="v-problem" hidden>
@@ -115,7 +116,7 @@ details p{margin:8px 0 0;color:var(--muted);font-size:13px}
   </section>
 
   <section id="v-ranking" hidden>
-    <p class="sec" style="margin:8px 0">Districts ordered by how many of the 55 indicators are at 25% or worse. Tap a district to see its gaps.</p>
+    <p class="sec" style="margin:8px 0">Districts ordered by how many indicators are at 25% or worse. Tap a district to see its gaps.</p>
     <div class="card" id="rlist"></div>
   </section>
 
@@ -124,14 +125,43 @@ details p{margin:8px 0 0;color:var(--muted);font-size:13px}
   </div>
   <details>
     <summary>How to read this</summary>
-    <p>Every number is a gap: the share of assessed PHCs that have the problem, so a lower number is always better. Where the question was "is it available?", PHCs that answered No or gave no information count as gaps.</p>
+    <p>The accessible-toilet gap counts No and Partial responses among all assessed facilities. Other PHC availability gaps retain the workbook definition, which may include missing responses. Subcentre gaps count explicit responses among all assessed subcentres. Teleconsultation bands describe service volume.</p>
     <p>The thin black mark on each bar is the Maharashtra-wide level, so you can see at a glance whether a district is better or worse than the state.</p>
-    <p>Mumbai City and Mumbai Suburban had no assessments. Very small districts can swing to 0% or 100% on a few PHCs, so confirm extreme values with the district office. Source: PHC analysis, all districts workbook.</p>
+    <p>Small assessment counts can produce large percentage changes. Compare the counts alongside the percentages.</p>
   </details>
 </div>
 
+<script src="snapshot.js"></script>
 <script>
-const D = {"secs":{"A":"Building & infrastructure","B":"Human resource","C":"Medicine","D":"Diagnostics","E":"Programmes & telehealth","F":"Community committees & monitoring"},"inds":[["A","Not in own Govt building"],["A","Land dispute (of own Govt buildings)"],["A","Building older than 40 yrs"],["A","Major or special repair required"],["A","Dilapidated, needs reconstruction"],["A","Boundary wall missing or partial"],["A","No branding"],["A","No electricity supply recorded"],["A","No 24x7 water supply"],["A","No functional toilet for men"],["A","No functional toilet for women"],["A","No disabled-friendly toilet"],["A","Toilet needs repair"],["A","Toilets not clean"],["A","Inadequate examination space"],["A","Inadequate space for yoga well"],["A","No functional solar electricity"],["A","No functional fire extinguisher"],["A","No drainage system"],["A","Drainage needs repair"],["A","Doors / windows need repair"],["A","Premises not cleaned"],["A","No residential facility for staff"],["B","0 MO filled"],["B","MO post vacant (reported bands)"],["B","0 Class IV male filled"],["B","0 Class IV female filled"],["B","0 sweeper filled"],["C","Fewer than 50 of 155 essential medicines"],["C","Anti Rabies Vaccine out of stock"],["C","Anti Rabies Serum out of stock"],["C","Anti Snake Venom out of stock"],["C","Hydroxy Urea out of stock"],["C","HTN / DM medicine issued for under 30 days"],["D","No cell counter"],["D","No semi-automated biochemistry analyser"],["D","No glucometer"],["D","No haemoglobinometer"],["D","No centrifuge"],["D","No regular equipment maintenance / calibration"],["D","Staff unaware of equipment-failure toll free no."],["E","Mental health patients not linked to Telemanas"],["E","No ManShakti clinic camp"],["E","No bed-ridden patient list followed up"],["E","No functional teleconsultation device"],["E","No network for teleconsultation"],["E","Teleconsultation under 20 per month"],["F","JAS not constituted"],["F","JAS member list not submitted"],["F","VHNSC list not submitted"],["F","JAS met fewer than 3 times"],["F","0 visits by district officers (Apr-Oct)"],["F","No biometric attendance"],["F","No suggestion box"],["F","No grievance redressal"]],"dists":[["Maharashtra",1972],["Ahilyanagar",104],["Akola",31],["Amravati",59],["Beed",56],["Bhandara",33],["Buldhana",57],["Chandrapur",65],["Chhatrapati Sambhajinagar",53],["Dharashiv",45],["Dhule",41],["Gadchiroli",52],["Gondia",45],["Hingoli",24],["Jalgaon",79],["Jalna",44],["Kolhapur",83],["Latur",51],["Mumbai City",null],["Mumbai Suburban",null],["Nagpur",56],["Nanded",70],["Nandurbar",63],["Nashik",113],["Palghar",46],["Parbhani",37],["Pune",110],["Raigad",57],["Ratnagiri",68],["Sangli",70],["Satara",84],["Sindhudurg",38],["Solapur",77],["Thane",33],["Wardha",33],["Washim",28],["Yavatmal",67]],"m":[[55,126,243,472,416,296,196,15,159,206,180,671,651,250,118,279,644,127,188,562,632,75,218,22,464,270,583,450,36,175,589,162,478,23,385,509,9,23,202,195,119,487,449,54,40,193,735,37,79,46,454,77,196,253,246],[58,102,183,462,433,212,125,0,135,183,135,673,586,96,115,240,904,86,164,442,625,115,221,10,529,269,586,548,29,173,702,144,721,10,490,433,19,48,144,96,77,673,548,38,10,173,414,48,67,38,29,86,58,279,173],[32,133,97,290,387,290,32,0,32,129,129,516,452,290,64,97,936,64,129,452,581,32,32,0,258,97,806,97,0,97,806,97,516,64,452,194,0,0,32,0,0,323,290,0,0,64,613,64,64,32,64,0,355,64,226],[51,125,254,492,542,152,237,0,85,186,203,780,814,271,102,271,797,68,220,458,712,51,152,0,475,152,508,729,17,356,559,373,322,17,576,492,0,0,424,271,152,627,746,34,17,170,746,0,68,68,848,34,152,170,305],[36,148,125,411,339,286,107,36,268,232,214,750,714,357,71,214,821,71,250,607,679,0,357,0,464,143,607,911,0,196,786,196,768,0,18,321,0,18,196,54,18,214,321,18,0,107,679,18,18,0,268,36,0,286,54],[30,94,303,636,546,30,61,0,30,273,242,788,697,212,121,303,727,0,91,636,758,91,61,61,364,152,515,485,0,212,91,242,212,30,424,333,0,0,485,30,30,212,242,0,0,0,515,0,0,0,30,0,61,91,152],[18,179,158,614,491,404,105,18,351,298,281,737,667,368,210,351,737,175,158,614,754,105,351,35,456,298,719,298,105,193,649,246,614,35,649,790,0,0,281,175,158,544,614,123,35,351,842,53,88,88,491,123,193,421,368],[15,78,92,446,415,246,415,0,123,123,123,692,538,200,215,215,492,138,323,492,477,62,185,31,538,354,508,231,0,62,677,62,246,15,477,231,0,46,92,200,92,800,385,31,15,169,892,108,138,15,62,46,492,292,154],[57,280,340,509,434,245,132,38,264,226,189,660,717,377,94,208,698,57,170,698,755,38,151,19,340,415,679,1000,38,264,698,226,660,19,566,434,38,57,189,151,38,491,547,57,170,226,868,76,132,57,774,57,0,170,151],[67,71,178,400,400,111,133,0,22,200,111,622,467,178,89,200,244,89,111,489,489,44,200,0,600,67,778,600,0,89,89,111,600,22,556,711,0,0,356,200,22,222,111,44,22,44,556,22,22,0,578,44,0,178,289],[73,105,317,488,415,366,146,0,171,317,220,683,634,463,122,317,634,171,220,463,658,146,146,0,366,146,488,390,49,342,683,342,317,73,585,732,0,0,195,98,146,780,512,73,122,439,732,49,73,49,463,0,244,244,439],[38,60,250,519,538,250,154,38,96,173,154,865,769,173,96,365,404,154,385,577,712,77,0,0,500,288,365,96,0,38,481,38,38,0,654,846,0,19,615,288,38,788,769,19,38,38,885,38,77,0,269,19,942,231,365],[89,0,200,556,378,178,200,0,267,267,311,733,733,333,156,422,867,200,267,533,756,111,222,0,311,89,622,200,67,22,844,22,156,44,289,333,0,0,178,178,111,733,889,0,0,178,733,89,111,22,311,22,200,156,267],[0,125,0,417,250,208,208,0,167,292,292,583,667,167,83,417,708,292,292,583,583,42,83,42,625,250,625,958,42,125,750,125,167,208,42,667,0,42,0,125,42,667,292,0,0,375,958,83,83,0,500,0,42,250,125],[13,115,127,443,354,316,89,0,127,152,139,696,646,291,51,342,101,240,165,608,544,114,342,76,481,127,684,266,25,253,582,253,684,25,443,456,0,63,354,316,165,392,456,13,127,177,861,25,165,101,456,76,304,177,266],[23,233,46,296,364,318,227,46,296,159,136,704,523,409,46,159,886,364,227,546,546,91,136,23,432,341,750,909,23,296,614,273,682,91,659,546,0,46,409,296,296,659,841,227,23,364,909,0,0,46,500,23,23,568,364],[48,38,253,566,458,337,132,0,84,132,132,747,735,277,84,241,843,120,145,699,663,72,458,48,554,205,590,84,36,60,518,60,602,0,48,470,12,12,60,217,96,48,313,24,60,108,747,36,48,0,205,108,24,337,289],[39,184,431,569,510,274,98,20,59,78,78,726,745,118,20,20,529,0,59,608,784,39,78,0,588,118,471,863,0,39,686,39,882,0,118,274,0,0,490,98,78,608,431,0,20,78,784,0,0,0,569,20,0,235,98],[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],[107,60,304,518,482,232,232,0,125,232,250,571,607,286,161,339,589,143,179,464,589,71,161,18,536,232,446,125,0,89,571,54,54,18,393,304,18,18,36,89,89,196,375,18,0,18,321,0,54,18,18,0,54,179,107],[100,159,257,543,529,271,214,29,257,343,329,657,714,343,143,314,757,129,314,729,700,157,186,14,529,114,586,914,86,529,543,314,557,114,871,843,57,43,200,286,171,686,757,200,57,343,929,71,114,143,743,243,714,371,271],[32,33,127,492,286,381,302,79,206,254,190,587,667,524,270,413,540,190,238,508,682,159,159,32,635,349,667,778,48,349,556,302,302,0,476,524,0,0,79,349,270,571,413,254,0,365,905,159,159,95,476,190,556,556,714],[35,110,186,549,398,407,248,9,204,159,142,673,673,204,195,292,345,230,186,664,690,133,266,0,389,416,602,159,9,168,549,168,204,9,18,593,0,26,133,159,71,673,372,18,0,257,416,0,97,35,504,221,363,230,195],[109,195,370,544,456,500,283,44,174,174,174,739,696,174,130,348,565,109,217,630,674,65,196,0,435,217,652,391,0,44,761,44,44,0,696,630,0,22,174,130,65,370,413,0,22,152,870,22,65,22,65,0,65,217,65],[54,86,108,378,216,405,432,27,216,351,324,595,514,540,189,460,838,216,378,405,622,135,189,0,189,378,919,973,54,0,1000,0,946,27,757,811,0,0,135,351,405,784,946,162,81,486,838,0,54,81,1000,0,27,486,270],[27,150,227,427,391,236,182,18,109,227,191,500,527,200,136,354,591,100,164,446,427,27,364,9,418,291,400,327,36,82,546,73,546,9,591,691,27,36,82,127,82,573,564,64,64,127,709,36,64,54,536,191,82,127,246],[105,196,544,544,561,456,158,18,263,281,281,702,667,246,105,281,474,53,123,526,667,18,386,18,281,386,281,88,18,70,474,53,825,0,88,509,0,35,561,421,158,614,368,70,53,123,930,18,18,70,947,175,140,404,246],[29,106,382,529,529,338,191,0,59,250,191,676,838,44,103,235,868,29,59,544,662,15,191,0,206,397,676,338,176,191,382,191,485,0,309,338,15,88,324,147,74,324,118,29,118,103,691,15,15,15,559,59,29,250,294],[14,203,243,114,129,314,257,14,114,86,14,429,357,129,43,200,414,29,86,343,314,43,171,0,486,500,443,629,0,114,686,100,600,0,0,300,0,0,29,200,100,443,314,0,57,229,857,14,14,14,243,14,14,186,200],[36,185,298,262,274,345,345,0,60,119,71,488,476,119,83,238,595,190,155,536,464,12,238,83,679,500,500,83,36,238,595,226,607,12,167,345,0,0,24,155,131,250,345,0,12,24,821,60,143,24,905,12,143,369,310],[158,125,447,632,553,395,132,0,53,158,79,790,710,53,132,395,816,26,105,658,632,53,184,105,526,316,737,368,0,79,921,79,658,53,0,395,0,0,184,368,132,158,158,0,132,0,553,0,26,0,421,0,737,26,184],[65,194,364,610,390,338,169,26,260,312,260,857,818,403,117,364,948,195,208,740,857,91,195,39,571,195,688,974,156,299,610,273,701,13,546,662,26,13,273,416,260,662,636,143,0,597,935,26,195,117,883,169,143,247,299],[182,111,152,303,424,303,91,0,91,61,91,848,515,121,30,333,758,61,91,303,333,61,303,0,303,91,394,424,0,182,515,152,273,0,30,667,0,0,121,61,30,121,91,91,30,30,848,0,0,91,454,0,30,121,91],[364,95,212,424,515,152,303,0,61,212,121,485,818,182,61,182,333,91,91,697,758,0,152,0,454,242,546,91,30,182,91,182,182,91,424,758,0,0,91,121,61,242,303,0,0,182,576,30,121,0,212,0,242,121,303],[0,107,321,464,464,143,250,0,214,214,143,643,786,179,71,143,536,71,143,643,821,0,143,0,643,107,607,36,36,143,357,214,179,0,36,71,0,0,36,36,36,286,214,0,71,286,750,71,214,107,71,0,36,71,107],[15,46,284,507,418,313,194,30,284,284,284,761,746,328,119,179,896,75,284,702,776,149,104,60,388,328,702,388,30,164,582,149,164,0,582,492,15,45,104,164,239,328,209,45,15,149,657,30,45,75,448,15,75,179,179]]};
+const PHC = {"secs":{"A":"Building & infrastructure","B":"Human resource","C":"Medicine","D":"Diagnostics","E":"Programmes & telehealth","F":"Community committees & monitoring"},"inds":[["A","Not in own Govt building"],["A","Land dispute (of own Govt buildings)"],["A","Building older than 40 yrs"],["A","Major or special repair required"],["A","Dilapidated, needs reconstruction"],["A","Boundary wall missing or partial"],["A","No branding"],["A","No electricity supply recorded"],["A","No 24x7 water supply"],["A","No functional toilet for men"],["A","No functional toilet for women"],["A","No disabled-friendly toilet"],["A","Toilet needs repair"],["A","Toilets not clean"],["A","Inadequate examination space"],["A","Inadequate space for yoga well"],["A","No functional solar electricity"],["A","No functional fire extinguisher"],["A","No drainage system"],["A","Drainage needs repair"],["A","Doors / windows need repair"],["A","Premises not cleaned"],["A","No residential facility for staff"],["B","0 MO filled"],["B","MO post vacant (reported bands)"],["B","0 Class IV male filled"],["B","0 Class IV female filled"],["B","0 sweeper filled"],["C","Fewer than 50 of 155 essential medicines"],["C","Anti Rabies Vaccine out of stock"],["C","Anti Rabies Serum out of stock"],["C","Anti Snake Venom out of stock"],["C","Hydroxy Urea out of stock"],["C","HTN / DM medicine issued for under 30 days"],["D","No cell counter"],["D","No semi-automated biochemistry analyser"],["D","No glucometer"],["D","No haemoglobinometer"],["D","No centrifuge"],["D","No regular equipment maintenance / calibration"],["D","Staff unaware of equipment-failure toll free no."],["E","Mental health patients not linked to Telemanas"],["E","No ManShakti clinic camp"],["E","No bed-ridden patient list followed up"],["E","No functional teleconsultation device"],["E","No network for teleconsultation"],["E","Teleconsultation under 20 per month"],["F","JAS not constituted"],["F","JAS member list not submitted"],["F","VHNSC list not submitted"],["F","JAS met fewer than 3 times"],["F","0 visits by district officers (Apr-Oct)"],["F","No biometric attendance"],["F","No suggestion box"],["F","No grievance redressal"]],"dists":[["Maharashtra",1972],["Ahilyanagar",104],["Akola",31],["Amravati",59],["Beed",56],["Bhandara",33],["Buldhana",57],["Chandrapur",65],["Chhatrapati Sambhajinagar",53],["Dharashiv",45],["Dhule",41],["Gadchiroli",52],["Gondia",45],["Hingoli",24],["Jalgaon",79],["Jalna",44],["Kolhapur",83],["Latur",51],["Mumbai City",null],["Mumbai Suburban",null],["Nagpur",56],["Nanded",70],["Nandurbar",63],["Nashik",113],["Palghar",46],["Parbhani",37],["Pune",110],["Raigad",57],["Ratnagiri",68],["Sangli",70],["Satara",84],["Sindhudurg",38],["Solapur",77],["Thane",33],["Wardha",33],["Washim",28],["Yavatmal",67]],"m":[[55,126,243,472,416,296,196,15,159,206,180,671,651,250,118,279,644,127,188,562,632,75,218,22,464,270,583,450,36,175,589,162,478,23,385,509,9,23,202,195,119,487,449,54,40,193,735,37,79,46,454,77,196,253,246],[58,102,183,462,433,212,125,0,135,183,135,673,586,96,115,240,904,86,164,442,625,115,221,10,529,269,586,548,29,173,702,144,721,10,490,433,19,48,144,96,77,673,548,38,10,173,414,48,67,38,29,86,58,279,173],[32,133,97,290,387,290,32,0,32,129,129,516,452,290,64,97,936,64,129,452,581,32,32,0,258,97,806,97,0,97,806,97,516,64,452,194,0,0,32,0,0,323,290,0,0,64,613,64,64,32,64,0,355,64,226],[51,125,254,492,542,152,237,0,85,186,203,780,814,271,102,271,797,68,220,458,712,51,152,0,475,152,508,729,17,356,559,373,322,17,576,492,0,0,424,271,152,627,746,34,17,170,746,0,68,68,848,34,152,170,305],[36,148,125,411,339,286,107,36,268,232,214,750,714,357,71,214,821,71,250,607,679,0,357,0,464,143,607,911,0,196,786,196,768,0,18,321,0,18,196,54,18,214,321,18,0,107,679,18,18,0,268,36,0,286,54],[30,94,303,636,546,30,61,0,30,273,242,788,697,212,121,303,727,0,91,636,758,91,61,61,364,152,515,485,0,212,91,242,212,30,424,333,0,0,485,30,30,212,242,0,0,0,515,0,0,0,30,0,61,91,152],[18,179,158,614,491,404,105,18,351,298,281,737,667,368,210,351,737,175,158,614,754,105,351,35,456,298,719,298,105,193,649,246,614,35,649,790,0,0,281,175,158,544,614,123,35,351,842,53,88,88,491,123,193,421,368],[15,78,92,446,415,246,415,0,123,123,123,692,538,200,215,215,492,138,323,492,477,62,185,31,538,354,508,231,0,62,677,62,246,15,477,231,0,46,92,200,92,800,385,31,15,169,892,108,138,15,62,46,492,292,154],[57,280,340,509,434,245,132,38,264,226,189,660,717,377,94,208,698,57,170,698,755,38,151,19,340,415,679,1000,38,264,698,226,660,19,566,434,38,57,189,151,38,491,547,57,170,226,868,76,132,57,774,57,0,170,151],[67,71,178,400,400,111,133,0,22,200,111,622,467,178,89,200,244,89,111,489,489,44,200,0,600,67,778,600,0,89,89,111,600,22,556,711,0,0,356,200,22,222,111,44,22,44,556,22,22,0,578,44,0,178,289],[73,105,317,488,415,366,146,0,171,317,220,683,634,463,122,317,634,171,220,463,658,146,146,0,366,146,488,390,49,342,683,342,317,73,585,732,0,0,195,98,146,780,512,73,122,439,732,49,73,49,463,0,244,244,439],[38,60,250,519,538,250,154,38,96,173,154,865,769,173,96,365,404,154,385,577,712,77,0,0,500,288,365,96,0,38,481,38,38,0,654,846,0,19,615,288,38,788,769,19,38,38,885,38,77,0,269,19,942,231,365],[89,0,200,556,378,178,200,0,267,267,311,733,733,333,156,422,867,200,267,533,756,111,222,0,311,89,622,200,67,22,844,22,156,44,289,333,0,0,178,178,111,733,889,0,0,178,733,89,111,22,311,22,200,156,267],[0,125,0,417,250,208,208,0,167,292,292,583,667,167,83,417,708,292,292,583,583,42,83,42,625,250,625,958,42,125,750,125,167,208,42,667,0,42,0,125,42,667,292,0,0,375,958,83,83,0,500,0,42,250,125],[13,115,127,443,354,316,89,0,127,152,139,696,646,291,51,342,101,240,165,608,544,114,342,76,481,127,684,266,25,253,582,253,684,25,443,456,0,63,354,316,165,392,456,13,127,177,861,25,165,101,456,76,304,177,266],[23,233,46,296,364,318,227,46,296,159,136,704,523,409,46,159,886,364,227,546,546,91,136,23,432,341,750,909,23,296,614,273,682,91,659,546,0,46,409,296,296,659,841,227,23,364,909,0,0,46,500,23,23,568,364],[48,38,253,566,458,337,132,0,84,132,132,747,735,277,84,241,843,120,145,699,663,72,458,48,554,205,590,84,36,60,518,60,602,0,48,470,12,12,60,217,96,48,313,24,60,108,747,36,48,0,205,108,24,337,289],[39,184,431,569,510,274,98,20,59,78,78,726,745,118,20,20,529,0,59,608,784,39,78,0,588,118,471,863,0,39,686,39,882,0,118,274,0,0,490,98,78,608,431,0,20,78,784,0,0,0,569,20,0,235,98],[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],[107,60,304,518,482,232,232,0,125,232,250,571,607,286,161,339,589,143,179,464,589,71,161,18,536,232,446,125,0,89,571,54,54,18,393,304,18,18,36,89,89,196,375,18,0,18,321,0,54,18,18,0,54,179,107],[100,159,257,543,529,271,214,29,257,343,329,657,714,343,143,314,757,129,314,729,700,157,186,14,529,114,586,914,86,529,543,314,557,114,871,843,57,43,200,286,171,686,757,200,57,343,929,71,114,143,743,243,714,371,271],[32,33,127,492,286,381,302,79,206,254,190,587,667,524,270,413,540,190,238,508,682,159,159,32,635,349,667,778,48,349,556,302,302,0,476,524,0,0,79,349,270,571,413,254,0,365,905,159,159,95,476,190,556,556,714],[35,110,186,549,398,407,248,9,204,159,142,673,673,204,195,292,345,230,186,664,690,133,266,0,389,416,602,159,9,168,549,168,204,9,18,593,0,26,133,159,71,673,372,18,0,257,416,0,97,35,504,221,363,230,195],[109,195,370,544,456,500,283,44,174,174,174,739,696,174,130,348,565,109,217,630,674,65,196,0,435,217,652,391,0,44,761,44,44,0,696,630,0,22,174,130,65,370,413,0,22,152,870,22,65,22,65,0,65,217,65],[54,86,108,378,216,405,432,27,216,351,324,595,514,540,189,460,838,216,378,405,622,135,189,0,189,378,919,973,54,0,1000,0,946,27,757,811,0,0,135,351,405,784,946,162,81,486,838,0,54,81,1000,0,27,486,270],[27,150,227,427,391,236,182,18,109,227,191,500,527,200,136,354,591,100,164,446,427,27,364,9,418,291,400,327,36,82,546,73,546,9,591,691,27,36,82,127,82,573,564,64,64,127,709,36,64,54,536,191,82,127,246],[105,196,544,544,561,456,158,18,263,281,281,702,667,246,105,281,474,53,123,526,667,18,386,18,281,386,281,88,18,70,474,53,825,0,88,509,0,35,561,421,158,614,368,70,53,123,930,18,18,70,947,175,140,404,246],[29,106,382,529,529,338,191,0,59,250,191,676,838,44,103,235,868,29,59,544,662,15,191,0,206,397,676,338,176,191,382,191,485,0,309,338,15,88,324,147,74,324,118,29,118,103,691,15,15,15,559,59,29,250,294],[14,203,243,114,129,314,257,14,114,86,14,429,357,129,43,200,414,29,86,343,314,43,171,0,486,500,443,629,0,114,686,100,600,0,0,300,0,0,29,200,100,443,314,0,57,229,857,14,14,14,243,14,14,186,200],[36,185,298,262,274,345,345,0,60,119,71,488,476,119,83,238,595,190,155,536,464,12,238,83,679,500,500,83,36,238,595,226,607,12,167,345,0,0,24,155,131,250,345,0,12,24,821,60,143,24,905,12,143,369,310],[158,125,447,632,553,395,132,0,53,158,79,790,710,53,132,395,816,26,105,658,632,53,184,105,526,316,737,368,0,79,921,79,658,53,0,395,0,0,184,368,132,158,158,0,132,0,553,0,26,0,421,0,737,26,184],[65,194,364,610,390,338,169,26,260,312,260,857,818,403,117,364,948,195,208,740,857,91,195,39,571,195,688,974,156,299,610,273,701,13,546,662,26,13,273,416,260,662,636,143,0,597,935,26,195,117,883,169,143,247,299],[182,111,152,303,424,303,91,0,91,61,91,848,515,121,30,333,758,61,91,303,333,61,303,0,303,91,394,424,0,182,515,152,273,0,30,667,0,0,121,61,30,121,91,91,30,30,848,0,0,91,454,0,30,121,91],[364,95,212,424,515,152,303,0,61,212,121,485,818,182,61,182,333,91,91,697,758,0,152,0,454,242,546,91,30,182,91,182,182,91,424,758,0,0,91,121,61,242,303,0,0,182,576,30,121,0,212,0,242,121,303],[0,107,321,464,464,143,250,0,214,214,143,643,786,179,71,143,536,71,143,643,821,0,143,0,643,107,607,36,36,143,357,214,179,0,36,71,0,0,36,36,36,286,214,0,71,286,750,71,214,107,71,0,36,71,107],[15,46,284,507,418,313,194,30,284,284,284,761,746,328,119,179,896,75,284,702,776,149,104,60,388,328,702,388,30,164,582,149,164,0,582,492,15,45,104,164,239,328,209,45,15,149,657,30,45,75,448,15,75,179,179]]};
+const isSC = new URLSearchParams(location.search).get('facility') === 'sc';
+const unit = isSC ? 'subcentres' : 'PHCs';
+const toiletIndex = isSC ? 2 : 11;
+const toiletLabel = 'Accessible toilet unavailable or partially available';
+const rate = (n, total) => Math.round(1000 * n / total);
+PHC.inds[11][1] = toiletLabel;
+PHC.dists.forEach(([name, n], i) => {
+  const c = snapshot.phc[name];
+  if (n && c) PHC.m[i][11] = rate((c.No || 0) + (c.Partial || 0), n);
+  PHC.m[i][46] = null;
+});
+const scSections = ['A','A','A','A','A','E','D','D','F'];
+const D = isSC ? {
+  secs: Object.fromEntries(Object.entries(PHC.secs).filter(([key]) => scSections.includes(key))),
+  inds: snapshot.fields.map((name, i) => [scSections[i], name]),
+  dists: PHC.dists.map(([name]) => [name, snapshot.groups[name]?.n || null]),
+  m: PHC.dists.map(([name]) => snapshot.fields.map((_, i) => {
+    const c = snapshot.groups[name];
+    return c?.n ? rate(c[i] || 0, c.n) : null;
+  }))
+} : PHC;
+document.getElementById('facility').value = isSC ? 'sc' : 'phc';
+document.getElementById('facility').onchange = event => {
+  const url = new URL(location.href);
+  url.searchParams.set('facility', event.target.value);
+  if (url.hash.startsWith('#p-')) url.hash = '';
+  location.assign(url);
+};
 const NI = D.inds.length, ND = D.dists.length;
 const fmt = (v) => (v / 10).toFixed(v % 10 === 0 ? 0 : 0) + '%';
 const pct = (v) => Math.round(v / 10) + '%';
@@ -155,7 +185,7 @@ $('dsel').innerHTML = D.dists.map((x, i) => `<option value="${i}">${esc(x[0])}${
 let ph = '';
 for (const k of Object.keys(D.secs)) {
   ph += `<optgroup label="${esc(k + '. ' + D.secs[k])}">`;
-  D.inds.forEach((x, i) => { if (x[0] === k) ph += `<option value="${i}">${esc(x[1])}</option>`; });
+  D.inds.forEach((x, i) => { if (x[0] === k && D.m[0][i] !== null) ph += `<option value="${i}">${esc(x[1])}</option>`; });
   ph += '</optgroup>';
 }
 $('psel').innerHTML = ph;
@@ -172,12 +202,39 @@ function itemHTML(i, v, st, compare) {
   const tick = compare && st !== null ? `<span class="tick" style="left:calc(${Math.min(st / 10, 100)}% - 1px)"></span>` : '';
   return `<button class="row" data-p="${i}" aria-label="${esc(D.inds[i][1])}: see all districts"><div class="top"><span class="name">${esc(D.inds[i][1])}</span><span class="val">${pct(v)}</span></div>
     <div class="bar" aria-hidden="true"><span class="fill ${b}" style="width:${Math.max(v / 10, 1)}%"></span>${tick}</div>
-    <div class="sub">${diff}<span>All districts ›</span></div></button>`;
+    ${i === toiletIndex ? toiletDetail(dist) : ''}<div class="sub">${diff}<span>All districts ›</span></div></button>`;
 }
 
+function responses(c) {
+  return ['No','Partial','Yes','Missing'].map(k => k + ' ' + (c?.[k] || 0)).join(' · ');
+}
+function toiletDetail(d) {
+  const name = D.dists[d][0];
+  const c = (isSC ? snapshot.groups : snapshot.phc)[name];
+  return '<div class="sec">' + ((c?.No || 0) + (c?.Partial || 0)) + ' of ' + D.dists[d][1] + ' assessed · ' + responses(c) + '</div>';
+}
+function renderContext(name) {
+  const v = snapshot.volumes[name]?.[isSC ? 1 : 0];
+  $('volume').innerHTML = v && assessed(dist) ? '<h2>Monthly teleconsultations</h2><p>Average consultations per month since April, grouped by facility.</p><div class="card">' +
+    ['Under 20','20 to under 40','40 to 60','Over 60','Missing or unusable'].map((label,i) =>
+      '<div class="row top"><span>'+label+'</span><b>'+v[i]+' '+unit+'</b></div>').join('') + '</div>' : '';
+  $('links').innerHTML = '';
+  if (!isSC) return;
+  const c = snapshot.groups[name] || {};
+  $('links').innerHTML = '<h2>Subcentre coverage</h2><p>'+ (c.n || 0)+' assessed of '+(c.eligible || 0)+' registered. '+(c.unresolved || 0)+' registered subcentres need parent PHC review. District totals include these subcentres.</p>';
+  if (!dist || !c.eligible) return;
+  const parents = snapshot.parents.filter(row => row[0] === name).sort((a,b) => a[1].localeCompare(b[1]) || a[2].localeCompare(b[2]));
+  $('links').insertAdjacentHTML('beforeend','<label class="lbl" for="parent">Linked subcentres by parent PHC</label><select id="parent"><option value="">Choose a PHC or review group</option><option value="u'+esc(name)+'">Parent link needs review</option>'+parents.map(([,block,n,key]) => '<option value="'+esc(key)+'">'+esc(block+' · '+n)+'</option>').join('')+'</select><div id="linked"></div>');
+  $('parent').onchange = e => {
+    const group = snapshot.groups[e.target.value] || {};
+    $('linked').innerHTML = e.target.value ? '<p>'+ (group.n || 0)+' assessed of '+(group.eligible || 0)+' registered subcentres.</p>' +
+      (group.n ? '<div class="card">'+snapshot.fields.map((label,i) => '<div class="row"><div class="top"><span>'+esc(label)+'</span><b>'+(group[i] || 0)+' / '+group.n+'</b></div>'+(i===2 ? '<small>'+responses(group)+'</small>' : '')+'</div>').join('')+'</div>' : '') : '';
+  };
+}
 function renderDistrict() {
   $('dsel').value = dist;
   const name = D.dists[dist][0];
+  renderContext(name);
   if (!assessed(dist)) {
     $('stats').innerHTML = '';
     $('chips').hidden = true;
@@ -186,7 +243,7 @@ function renderDistrict() {
   }
   $('chips').hidden = false;
   const n = D.dists[dist][1], rc = redCount(dist);
-  $('stats').innerHTML = `<div class="stat"><b>${n.toLocaleString('en-IN')}</b><span>PHCs assessed</span></div>
+  $('stats').innerHTML = `<div class="stat"><b>${n.toLocaleString('en-IN')}</b><span>${unit} assessed</span></div>
     <div class="stat"><b>${rc}</b><span>of ${D.m[dist].filter((v) => v !== null).length} at 25%+</span></div>
     <div class="stat"><b>${dist === 0 ? '–' : rankOf(dist) + ' / ' + ranked.length}</b><span>${dist === 0 ? 'State total' : 'Rank, most gaps'}</span></div>`;
   document.querySelectorAll('#chips .chip').forEach((c) => c.setAttribute('aria-pressed', c.dataset.area === area));
@@ -220,7 +277,7 @@ function renderProblem() {
     const b = band(v), diff = Math.round((v - st) / 10);
     return `<button class="row" data-d="${d}"><div class="top"><span class="left"><span class="rk">${k + 1}</span><span class="name">${esc(D.dists[d][0])}</span></span><span class="val">${pct(v)}</span></div>
       <div class="bar" aria-hidden="true"><span class="fill ${b}" style="width:${Math.max(v / 10, 1)}%"></span><span class="tick" style="left:calc(${Math.min(st / 10, 100)}% - 1px)"></span></div>
-      <div class="sub"><span>${diff > 0 ? `<span class="worse">${diff} pts worse than state</span>` : diff < 0 ? `<span class="better">${-diff} pts better than state</span>` : 'Same as state'}</span><span>${D.dists[d][1]} PHCs</span></div></button>`;
+      ${prob === toiletIndex ? toiletDetail(d) : ''}<div class="sub"><span>${diff > 0 ? `<span class="worse">${diff} pts worse than state</span>` : diff < 0 ? `<span class="better">${-diff} pts better than state</span>` : 'Same as state'}</span><span>${D.dists[d][1]} ${unit}</span></div></button>`;
   }).join('') + `</div>` + `<p class="sec" style="margin-top:10px">Not assessed: ${D.dists.filter((x, i) => i && !assessed(i)).map((x) => esc(x[0])).join(', ')}.</p>`;
 }
 
@@ -230,7 +287,7 @@ function renderRanking() {
     const c = redCount(d), tot = D.m[d].filter((v) => v !== null).length, b = c / tot >= .5 ? 'red' : c / tot >= .35 ? 'org' : 'amb';
     return `<button class="row" data-d="${d}"><div class="top"><span class="left"><span class="rk">${k + 1}</span><span class="name">${esc(D.dists[d][0])}</span></span><span class="val">${c}</span></div>
       <div class="bar" aria-hidden="true"><span class="fill ${b}" style="width:${c / max * 100}%"></span></div>
-      <div class="sub"><span>indicators at 25%+ of ${tot}</span><span>${D.dists[d][1]} PHCs</span></div></button>`;
+      <div class="sub"><span>indicators at 25%+ of ${tot}</span><span>${D.dists[d][1]} ${unit}</span></div></button>`;
   }).join('');
 }
 
@@ -249,7 +306,7 @@ function fromHash() {
   const h = location.hash.slice(1);
   if (h === 'ranking') return show(h);
   if (h === 'problem') return show('problem');
-  if (/^p-[0-9]+$/.test(h) && +h.slice(2) < NI) { prob = +h.slice(2); return show('problem'); }
+  if (/^p-[0-9]+$/.test(h) && +h.slice(2) < NI && D.m[0][+h.slice(2)] !== null) { prob = +h.slice(2); return show('problem'); }
   if (h.startsWith('d-')) { const i = D.dists.findIndex((x) => slug(x[0]) === h.slice(2)); if (i > 0) dist = i; }
   show('district');
 }
