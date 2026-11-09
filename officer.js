@@ -6,24 +6,25 @@ const option = value => '<option>'+esc(value)+'</option>';
 const params = new URLSearchParams(location.search);
 const mapping = params.get('view') === 'mapping';
 const allDistricts = 'Maharashtra';
-let selected = Number(params.get('indicator') || 0);
-if (!Number.isInteger(selected) || !measures[selected]) selected = 0;
+let selected = Number(params.get('indicator') ?? -1);
+if (!Number.isInteger(selected) || !measures[selected]) selected = -1;
 let page = 0, detailRows = [];
 $('district').innerHTML = [allDistricts,...districts].map(option).join('');
 $('category').insertAdjacentHTML('beforeend',[...new Set(measures.map(m=>m[0]))].map(option).join(''));
 function restore(id) {
   if ([...$(id).options].some(o=>o.value===params.get(id))) $(id).value=params.get(id);
 }
-for (const id of ['district','kind','category','sort','status']) restore(id);
+for (const id of ['district','kind','category','sort','status','response']) restore(id);
 $('search').value=params.get('search') || '';
 $(mapping?'mappingNav':'reviewNav').setAttribute('aria-current','page');
 for (const id of ['kindLabel','categoryLabel','sortControl']) $(id).hidden=mapping;
 $('statusLabel').hidden=!mapping;
+$('responseLabel').hidden=mapping;
 function save() {
   const url = new URL(location.href);
   url.search = '';
   url.searchParams.set('view',mapping?'mapping':'gaps');
-  for (const id of ['district',...(mapping?['status']:['kind','category','sort']),'block']) {
+  for (const id of ['district',...(mapping?['status']:['kind','category','sort','response']),'block']) {
     if ($(id).selectedIndex>0) url.searchParams.set(id,$(id).value);
   }
   if (!mapping) url.searchParams.set('indicator',selected);
@@ -66,33 +67,53 @@ function mappingView() {
   detailRows=scope;
 }
 function gapsView() {
-  const scope=facilities.filter(r=>selectedDistrict(r) && ($('kind').selectedIndex===0 || r[3]===$('kind').value));
-  $('sortControl').hidden=$('district').selectedIndex!==0;
-  const ranked=measures.map(([category,name],i)=>({
-    category,name,i,count:scope.filter(r=>r[4] & (1<<i)).length,missing:scope.filter(r=>r[5] & (1<<i)).length
-  })).filter(m=>$('category').selectedIndex===0 || m.category===$('category').value);
-  ranked.sort((a,b)=>b.count-a.count || a.name.localeCompare(b.name));
-  const mask=ranked.reduce((v,m)=>v|(1<<m.i),0);
-  cards([[scope.length,'Assessed facilities'],[scope.filter(r=>r[4]&mask).length,'Facilities with at least one selected gap'],[scope.filter(r=>r[5]&mask).length,'Facilities missing at least one selected response']]);
-  $('rankTitle').textContent='Most reported gaps';
-  $('definition').textContent='Five comparable measures have facility-level evidence here. The full assessment explorer covers 54 PHC and 35 subcentre gap indicators. Select a measure to see the districts and facilities affected.';
-  if (!ranked.some(m=>m.i===selected)) selected=ranked[0].i;
-  $('ranking').innerHTML=table(['Measure','Category','Affected','% assessed','Missing'],ranked.map(m=>
-    '<tr class="'+(m.i===selected?'selected':'')+'"><td><button class="pick" data-measure="'+m.i+'">'+esc(m.name)+'</button></td>'+cell(m.category)+num(m.count)+cell(percent(m.count,scope.length))+num(m.missing)+'</tr>'));
-  const selectedMask=1<<selected;
-  detailRows=scope.filter(r=>r[4]&selectedMask);
-  $('detailTitle').textContent=measures[selected][1];
-  $('detailNote').textContent=$('district').value+' · '+fmt(detailRows.length)+' affected of '+fmt(scope.length)+' assessed. The register lists facilities reporting this gap.';
-  if ($('district').selectedIndex===0) {
-    const counts=new Map();
-    for (const r of scope) {
-      if (!counts.has(r[0])) counts.set(r[0],[0,0]);
-      const c=counts.get(r[0]); c[0]++; if (r[4]&selectedMask) c[1]++;
+  const scope=facilities.filter(r=>selectedDistrict(r) && (!$('kind').selectedIndex || r[3]===$('kind').value));
+  const available=measures.map(([category,name,sc],i)=>({category,name,sc,i})).filter(m=>$('kind').value!=='SC' || m.sc);
+  const categories=[...new Set(available.map(m=>m.category))];
+  const oldCategory=$('category').value;
+  $('category').innerHTML=['All categories',...categories].map(option).join('');
+  if(categories.includes(oldCategory)) $('category').value=oldCategory;
+  const ranked=available.filter(m=>!$('category').selectedIndex || m.category===$('category').value);
+  for(const m of ranked) {
+    m.count=0;m.missing=0;m.total=0;
+    for(const r of scope) {
+      const state=r[4][m.i];
+      if(state!=='-') m.total++;
+      if(state==='1') m.count++;
+      if(state==='?') m.missing++;
     }
-    const score=([,[n,c]])=>$('sort').value==='rate'?c/n:c;
-    const order=[...counts].sort((a,b)=>score(b)-score(a) || b[1][1]-a[1][1] || a[0].localeCompare(b[0]));
-    $('ranking').insertAdjacentHTML('beforeend','<h3>Districts with the most gaps · '+esc(measures[selected][1])+'</h3>'+table(['District','Affected','Assessed','% affected'],order.slice(0,5).map(([d,[n,c]])=>'<tr><td><button class="pick" data-district="'+esc(d)+'">'+esc(d)+'</button></td>'+num(c)+num(n)+cell(percent(c,n))+'</tr>')));
   }
+  const score=m=>$('sort').value==='rate'?(m.total?m.count/m.total:-1):m.count;
+  const rank=(a,b)=>score(b)-score(a) || b.count-a.count || a.name.localeCompare(b.name);
+  ranked.sort(rank);
+  cards([[scope.length,'Assessed facilities'],[scope.filter(r=>ranked.some(m=>r[4][m.i]==='1')).length,'Facilities with at least one selected gap'],[scope.filter(r=>ranked.some(m=>r[4][m.i]==='?')).length,'Facilities missing at least one selected response']]);
+  $('rankTitle').textContent='Gap priorities';
+  $('definition').textContent='Compare affected counts for workload and percentages for prevalence. Each rate uses eligible assessed facilities. Select a category, measure or district to inspect its facility records.';
+  if(!ranked.some(m=>m.i===selected)) selected=ranked[0].i;
+  const groups=categories.map(category=>{
+    const members=available.filter(m=>m.category===category);
+    return {name:category,count:scope.filter(r=>members.some(m=>r[4][m.i]==='1')).length,total:scope.filter(r=>members.some(m=>r[4][m.i]!=='-')).length};
+  }).sort(rank);
+  let html=!$('category').selectedIndex?'<h3>Facilities affected by category</h3>'+table(['Category','Affected facilities','Eligible','% affected'],groups.map(m=>'<tr><td><button class="pick" data-category="'+esc(m.name)+'">'+esc(m.name)+'</button></td>'+num(m.count)+num(m.total)+cell(percent(m.count,m.total))+'</tr>')):'';
+  const m=ranked.find(m=>m.i===selected);
+  const byDistrict=new Map();
+  for(const r of scope) {
+    if(r[4][selected]==='-') continue;
+    if(!byDistrict.has(r[0])) byDistrict.set(r[0],{name:r[0],count:0,total:0});
+    const d=byDistrict.get(r[0]);d.total++;if(r[4][selected]==='1') d.count++;
+  }
+  const districtRows=[...byDistrict.values()].sort(rank);
+  html+='<h3>Indicators</h3>'+table(['Indicator','Applies to','Affected','Eligible','% affected','Missing'],ranked.map(m=>
+    '<tr class="'+(m.i===selected?'selected':'')+'"><td><button class="pick" data-measure="'+m.i+'">'+esc(m.name)+'</button></td>'+cell(m.sc?'PHC, SC':'PHC')+num(m.count)+num(m.total)+cell(percent(m.count,m.total))+num(m.missing)+'</tr>'));
+  if (!$('district').selectedIndex) html+='<details open id="districtRanks"><summary>District comparison · '+esc(m.name)+'</summary>'+table(['District','Affected','Eligible','% affected'],districtRows.map(d=>'<tr><td><button class="pick" data-district="'+esc(d.name)+'">'+esc(d.name)+'</button></td>'+num(d.count)+num(d.total)+cell(percent(d.count,d.total))+'</tr>'))+'</details>';
+  $('ranking').innerHTML=html;
+  detailRows=scope.filter(r=>r[4][selected]===$('response').value);
+  $('detailTitle').textContent=m.name;
+  $('detailNote').textContent=$('district').value+' · '+fmt(m.count)+' affected of '+fmt(m.total)+' eligible assessed facilities · '+fmt(m.missing)+' missing or unclear.';
+}
+function evidenceCells(row) {
+  const [value,remark]=row[5][selected] || [0,0];
+  return [...row.slice(0,4),officerData.texts[value] || (row[4][selected]==='?'?'Missing or unclear':'Reported gap'),officerData.texts[remark] || 'No recorded remark'];
 }
 function renderList() {
   const term=$('search').value.toLocaleLowerCase().trim();
@@ -100,7 +121,7 @@ function renderList() {
   const pages=Math.max(1,Math.ceil(rows.length/25));
   page=Math.min(page,pages-1);
   $('listCount').textContent=fmt(rows.length)+' matching '+(mapping?'subcentres':'facilities');
-  $('list').innerHTML=rows.length?table(mapping?['District','Block','Subcentre','Recorded parent','Status','Matched or candidate PHC']:['District','Block','Facility','Type'],rows.slice(25*page,25*(page+1)).map(r=>'<tr>'+(mapping?r:r.slice(0,4)).map(v=>cell(v||'—')).join('')+'</tr>')):'<p>No facilities match these filters.</p>';
+  $('list').innerHTML=rows.length?table(mapping?['District','Block','Subcentre','Recorded parent','Status','Matched or candidate PHC']:['District','Block','Facility','Type','Assessment response','Facility remark'],rows.slice(25*page,25*(page+1)).map(r=>'<tr>'+(mapping?r:evidenceCells(r)).map(v=>cell(v||'—')).join('')+'</tr>')):'<p>No facilities match these filters.</p>';
   $('prev').disabled=!page; $('next').disabled=page>=pages-1; $('page').textContent=(page+1)+' / '+pages;
 }
 function render() {
@@ -115,11 +136,14 @@ function render() {
 $('ranking').onclick=e=>{
   const b=e.target.closest('button'); if (!b) return;
   if (b.dataset.district) $('district').value=b.dataset.district;
+  else if (b.dataset.category) { $('category').value=b.dataset.category; selected=-1; }
   else selected=Number(b.dataset.measure);
   $('block').selectedIndex=0; $('search').value='';page=0;render();
-  $('detail').scrollIntoView();
+  if(b.dataset.category) $('rankTitle').scrollIntoView();
+  else if(b.dataset.measure && !$('district').selectedIndex) $('districtRanks').scrollIntoView();
+  else $('detail').scrollIntoView();
 };
-for (const id of ['district','category','kind','sort']) $(id).onchange=()=>{page=0;$('block').selectedIndex=0;render();};
+for (const id of ['district','category','kind','sort','response']) $(id).onchange=()=>{page=0;$('block').selectedIndex=0;render();};
 for (const id of ['status','block','search']) $(id).addEventListener(id==='search'?'input':'change',()=>{page=0;renderList();save();});
 $('prev').onclick=()=>{page--;renderList();};$('next').onclick=()=>{page++;renderList();};
 render();

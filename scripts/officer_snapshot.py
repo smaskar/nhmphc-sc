@@ -89,31 +89,42 @@ for d,b,name,_,id,recorded,nin,linked,*_ in scs:
         else:
             status='Confirm parent'
     reviews.append([d,b,name,recorded or '',status,candidate])
-# A mask stores explicit facility gaps and another stores missing or unrecognised responses.
-measures = [
- ('Infrastructure','Accessible toilet unavailable or partial','D1_toilet_accessible','D1_toilet_disability_friendly',{'No','Partially','Partial'}),
- ('Infrastructure','Boundary wall absent or partial','D1_1_2','D1_1_2',{'No','Partially','Partial'}),
- ('Diagnostics','Glucometer unavailable','D5_equipment_glucometer','D5_equipment_glucometer',{'No'}),
- ('Diagnostics','Haemoglobinometer unavailable','D5_equipment_haemoglobinometer','D5_equipment_haemoglobinometer',{'No'}),
- ('Community monitoring','Suggestion box unavailable','D11_suggestion_box','D11_suggestion_box',{'No'})]
+
+from indicator_rules import assess, public_remark
+site=pathlib.Path(__file__).resolve().parents[1]
+private_dir = pathlib.Path(sys.argv[2]).resolve() if len(sys.argv)>2 else None
+if private_dir and (private_dir == site or site in private_dir.parents):
+    raise ValueError('Private output must be outside the public site')
+def original_remark(value):
+    return value.strip() if isinstance(value,str) else ''
+remark_text=original_remark if private_dir else public_remark
+explorer=json.loads((site/'explorer.html').read_text().split('const D = ',1)[1].split(';\n',1)[0])
+extra={x['source_id']:json.loads(x['answers']) for x in copy_rows('assessment-data.sql.gz','phc_additional_information') if x['source_type']=='SUBMISSION' and x['status']=='SUBMITTED'}
+# Keep the first five public indicator URLs stable.
+order=[11,5,36,37,53]+[i for i in range(55) if i not in (11,5,36,37,53,46)]
+names={18:'Drainage absent or non-functional',11:'Accessible toilet unavailable or partial',24:'MO vacancy in reported staffing bands',45:'No teleconsultation network',51:'No district officer visit since April',54:'No grievance redressal reported'}
+measures=[[explorer['secs'][section],names.get(i,name),explorer['s'][0][i] is not None] for i in order for section,name in [explorer['inds'][i]]]
 facilities=[]
-for (kind,id),(_,a) in latest.items():
-    d,b,name = (by_sc if kind=='SC' else by_phc)[id][:3]
-    gaps = missing = 0
-    for i,(_,_,pk,sk,bad) in enumerate(measures):
-        v = (a.get('S_'+sk+'_yn.v') or a.get('S_'+sk+'.v')) if kind=='SC' else a.get(pk+'.v')
-        if v in bad:
-            gaps |= 1<<i
-        elif v not in ('Yes','No','Partially','Partial'):
-            missing |= 1<<i
-    facilities.append([d,b or '',name,kind,gaps,missing])
-assert len(reviews)==1992 and len(facilities)==1972+10821
-assert all(sum(f[0]==d and f[3]=='SC' for f in facilities)==n for d,n in assessed.items() if d!='Maharashtra')
-districts = [x[0] for x in json.loads((root/'review-counts.json').read_text())]
-payload=dict(districts=districts,reviews=reviews,facilities=facilities,measures=[m[:2] for m in measures])
-path=pathlib.Path(__file__).resolve().parents[1]/'officer-data.js'
-path.write_text('const officerData = '+json.dumps(payload,separators=(',',':'),ensure_ascii=False)+';\n')
-for d in districts:
-    rows=[x for x in reviews if x[0]==d]
-    print(d,len(rows),sum(x[4]=='Backup match' for x in rows))
-print(collections.Counter(x[4] for x in reviews))
+texts=[''];lookup={'':0}
+def text_id(s):
+    if s not in lookup:lookup[s]=len(texts);texts.append(s)
+    return lookup[s]
+for (kind,id),(stamp,a) in latest.items():
+    d,b,name=(by_sc if kind=='SC' else by_phc)[id][:3]
+    states=[];details={}
+    for j,i in enumerate(order):
+        status,evidence,remark=assess(i,kind,a,extra.get(stamp[1],{}),remark_text) if kind=='PHC' or measures[j][2] else ('-','','')
+        states.append(status)
+        if status=='1' or (status=='?' and remark):details[j]=[text_id(evidence),text_id(remark)]
+    facilities.append([d,b or '',name,kind,''.join(states),details])
+assert len(reviews)==1992 and len(facilities)==12793 and len(measures)==54 and sum(m[2] for m in measures)==35
+districts=[x[0] for x in json.loads((root/'review-counts.json').read_text())]
+payload=dict(districts=districts,reviews=reviews,facilities=facilities,measures=measures,texts=texts)
+if private_dir:
+    import shutil
+    private_dir.mkdir(parents=True,exist_ok=True,mode=0o700)
+    for filename in ('index.html','officer.js','explorer.html','snapshot.js'):
+        shutil.copy2(site/filename,private_dir/filename)
+    page=private_dir/'index.html'
+    page.write_text(page.read_text().replace('Officer overview · Backup','Local officer copy with original remarks · Backup'))
+((private_dir or site)/'officer-data.js').write_text('const officerData = '+json.dumps(payload,separators=(',',':'),ensure_ascii=False)+';\n')
